@@ -30,7 +30,7 @@ Define data-related constants
 SHOT_PAD = 0
 MIN_SEQ_LEN = 10
 MAX_NUM_TRACKS = 12
-MIN_TRACK_LEN = 1
+MIN_TRACK_LEN = 30
 MIN_KEYP_CONF = 0.4
 
 
