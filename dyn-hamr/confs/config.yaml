@@ -53,7 +53,7 @@ log_root: ../outputs/logs
 log_dir: ${log_root}/${data.type}-${data.split}
 exp_name: ${now:%Y-%m-%d}
 temporal_smooth: True
-gpu: 0
+gpu: 5
 
 hydra:
   job:
