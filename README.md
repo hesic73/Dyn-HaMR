@@ -163,7 +163,7 @@ Please see [License](https://github.com/ZhengdiYu/Dyn-HaMR/blob/main/LICENSE) fo
 
 ## Citation
 ```bibtex
-@article{yu2025dyn,
+@inproceedings{yu2025dynhamr,
   title={Dyn-HaMR: Recovering 4D Interacting Hand Motion from a Dynamic Camera},
   author={Yu, Zhengdi and Zafeiriou, Stefanos and Birdal, Tolga},
   booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
