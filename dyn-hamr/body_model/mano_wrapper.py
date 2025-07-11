@@ -2,13 +2,13 @@ import torch
 import numpy as np
 import pickle
 from typing import Optional
-import smplx
+from body_model import MANOLayer
 from smplx.lbs import vertices2joints
 from smplx.utils import MANOOutput, to_tensor
 from smplx.vertex_ids import vertex_ids
 
 
-class MANO(smplx.MANOLayer):
+class MANO(MANOLayer):
     def __init__(self, *args, joint_regressor_extra: Optional[str] = None, **kwargs):
         """
         Extension of the official MANO implementation to support more joints.
