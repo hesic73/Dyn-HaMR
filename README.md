@@ -140,17 +140,17 @@ Please follow the instructions [here](https://github.com/MengHao666/Hand-BMC-pyt
 To run the optimization pipeline for fitting on arbitrary RGB-(D) videos, please first edit the path information here in `dyn-hamr/confs/data/video.yaml`, where `root` is the root folder to all of your datasets. `video_dir` is the corresponding folder that contains the videos. The key `seq` represents the video name you wanted to process. For example, you can run the following command to recover the global motion for `test/videos/demo1.mp4`:
 
 ```
-python run_opt.py data=video run_opt=True data.seq=demo1
+python run_opt.py data=video run_opt=True data.seq=demo1 is_static=<True of False>
 ```
-By default, the result will be saved to `outputs/logs/video-custom/<DATE>/<VIDEO_NAME>-<tracklet>-shot-<shot_id>-<start_frame_id>-<end_frame_id>`. After optimization, you can specify the output log dir and visualize the results by running the following command:
+By default, the camera parameters will be predicted during the process and assumes a moving camera (`is_static=False`). If your video is recorded with a static camera, you can add `is_static=True` for more stable optimization. The result will be saved to `outputs/logs/video-custom/<DATE>/<VIDEO_NAME>-<tracklet>-shot-<shot_id>-<start_frame_id>-<end_frame_id>`. After optimization, you can specify the output log dir and visualize the results by running the following command:
 ```
 python run_vis.py --log_root <LOG_ROOT>
 ```
 This will visualize all log subdirectories and save the rendered videos and images, as well as saved 3D meshes in the world space in `<LOG_ROOT>`. Please visit `run_vis.py` for further details. Alternatively, you can also use the following command to run and visualize the results in one-stage:
 ```
-python -u run_opt.py data=video run_opt=True run_vis=True
+python -u run_opt.py data=video run_opt=True run_vis=True is_static=<True of False>
 ```
-As a multi-stage pipeline, you can customize the optimization process. Adding `run_prior=True` can activate the motion prior in stage III. Please note that in the current version, each motion chunk size needs to be set to 128 to be compatible with the original setting of HMP only when the prior module is activated.
+As a multi-stage pipeline, you can customize the optimization process. Add `is_static=True` for static camera videos. Adding `run_prior=True` can activate the motion prior in stage III. Please note that in the current version, each motion chunk size needs to be set to 128 to be compatible with the original setting of HMP only when the prior module is activated.
 
 ### Blender Addon
 Coming soon.

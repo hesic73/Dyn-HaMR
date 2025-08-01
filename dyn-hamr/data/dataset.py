@@ -30,7 +30,7 @@ Define data-related constants
 SHOT_PAD = 0
 MIN_SEQ_LEN = 10
 MAX_NUM_TRACKS = 12
-MIN_TRACK_LEN = 30
+MIN_TRACK_LEN = 60
 MIN_KEYP_CONF = 0.4
 
 
@@ -52,6 +52,7 @@ def get_dataset_from_cfg(cfg):
         shot_idx=args.shot_idx,
         start_idx=int(args.start_idx),
         end_idx=int(args.end_idx),
+        is_static=cfg.is_static,
         split_cameras=args.get("split_cameras", True),
     )
 
@@ -92,9 +93,11 @@ class MultiPeopleDataset(Dataset):
         shot_idx=0,
         start_idx=0,
         end_idx=-1,
+        is_static=False,
         pad_shot=False,
         split_cameras=True,
     ):
+        self.is_static = is_static
         self.seq_name = seq_name
         self.data_sources = data_sources
         self.split_cameras = split_cameras
@@ -302,7 +305,7 @@ class MultiPeopleDataset(Dataset):
             data_interval = self.data_start, self.data_end
         track_interval = self.start_idx, self.end_idx
         self.cam_data = CameraData(
-            cam_dir, self.seq_len, self.img_size, data_interval, track_interval
+            cam_dir, self.seq_len, self.img_size, self.is_static, data_interval, track_interval
         )
 
     def get_camera_data(self):
@@ -313,10 +316,11 @@ class MultiPeopleDataset(Dataset):
 
 class CameraData(object):
     def __init__(
-        self, cam_dir, seq_len, img_size, data_interval=[0, -1], track_interval=[0, -1]
+        self, cam_dir, seq_len, img_size, is_static, data_interval=[0, -1], track_interval=[0, -1]
     ):
         self.img_size = img_size
         self.cam_dir = cam_dir
+        self.is_static = is_static
 
         # inclusive exclusive
         data_start, data_end = data_interval
@@ -341,7 +345,7 @@ class CameraData(object):
         sidx, eidx = self.sidx, self.eidx
         img_w, img_h = self.img_size
         fpath = os.path.join(self.cam_dir, "cameras.npz")
-        if os.path.isfile(fpath):
+        if os.path.isfile(fpath) and not self.is_static:
             Logger.log(f"Loading cameras from {fpath}...")
             cam_R, cam_t, intrins, width, height = load_cameras_npz(fpath, self.seq_len)
             scale = img_w / width
@@ -354,7 +358,6 @@ class CameraData(object):
             t0 = -cam_t[sidx:sidx+1] + torch.randn(3) * 0.1
             self.cam_R = cam_R[sidx:eidx]
             self.cam_t = cam_t[sidx:eidx] - t0
-            self.is_static = False
         else:
             # raise ValueError
             Logger.log(f"WARNING: {fpath} does not exist, using static cameras...")
@@ -365,9 +368,7 @@ class CameraData(object):
 
             self.cam_R = torch.eye(3)[None].repeat(self.seq_len, 1, 1)
             self.cam_t = torch.zeros(self.seq_len, 3)
-            self.is_static = True
 
-        print(len(self.intrins), len(intrins), sidx, eidx)
         Logger.log(f"Images have {img_w}x{img_h}, intrins {self.intrins[0]}")
         print("CAMERA DATA", self.cam_R.shape, self.cam_t.shape, self.intrins[0])
 
