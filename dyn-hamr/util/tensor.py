@@ -1,13 +1,15 @@
 import torch
 import numpy as np
 
+from typing import Union, List, Dict, Any
 
-def move_to(obj, device):
+
+def move_to(obj, device:torch.device):
     if isinstance(obj, torch.Tensor):
         return obj.to(device)
-    if isinstance(obj, dict):
+    elif isinstance(obj, dict):
         return {k: move_to(v, device) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    elif isinstance(obj, (list, tuple)):
         return [move_to(x, device) for x in obj]
     return obj  # otherwise do nothing
 
@@ -15,34 +17,41 @@ def move_to(obj, device):
 def detach_all(obj):
     if isinstance(obj, torch.Tensor):
         return obj.detach()
-    if isinstance(obj, dict):
+    elif isinstance(obj, dict):
         return {k: detach_all(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    elif isinstance(obj, (list, tuple)):
         return [detach_all(x) for x in obj]
-    return obj  # otherwise do nothing
+    else:
+        return obj  # otherwise do nothing
 
 
 def to_torch(obj):
-    if isinstance(obj, np.ndarray):
+    if isinstance(obj, torch.Tensor):
+        return obj
+    elif isinstance(obj, np.ndarray):
         return torch.from_numpy(obj).float()
-    if isinstance(obj, dict):
+    elif isinstance(obj, dict):
         return {k: to_torch(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    elif isinstance(obj, (list, tuple)):
         return [to_torch(x) for x in obj]
-    return obj
+    else:
+        return obj  # otherwise do nothing
 
 
 def to_np(obj):
-    if isinstance(obj, torch.Tensor):
+    if isinstance(obj, np.ndarray):
+        return obj
+    elif isinstance(obj, torch.Tensor):
         return obj.numpy()
-    if isinstance(obj, dict):
+    elif isinstance(obj, dict):
         return {k: to_np(v) for k, v in obj.items()}
-    if isinstance(obj, (list, tuple)):
+    elif isinstance(obj, (list, tuple)):
         return [to_np(x) for x in obj]
-    return obj
+    else:
+        return obj  # otherwise do nothing
 
 
-def get_device(i=0):
+def get_device(i: int) -> torch.device:
     device = f"cuda:{i}" if torch.cuda.is_available() else "cpu"
     return torch.device(device)
 
