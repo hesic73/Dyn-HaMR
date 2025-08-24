@@ -1,6 +1,6 @@
 type: video
 split: custom
-root: /data/home/zy3023/code/hand/Dyn-HaMR/test  # put your videos in root/videos/vid.mp4
+root: /home/hsc/25fall/Dyn-HaMR-root  # put your videos in root/videos/vid.mp4
 video_dir: videos
 seq: demo1
 ext: mp4

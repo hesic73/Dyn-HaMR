@@ -1,7 +1,3 @@
-[submodule "third-party/DROID-SLAM"]
-	path = third-party/DROID-SLAM
-	url = https://github.com/ZhengdiYu/DROID-SLAM.git
-	branch = main
 [submodule "third-party/hamer"]
 	path = third-party/hamer
 	url = https://github.com/ZhengdiYu/hamer.git

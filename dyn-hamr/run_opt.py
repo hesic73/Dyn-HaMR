@@ -44,14 +44,12 @@ import time
 N_STAGES = 3
 
 import sys
-sys.path.append('src/human_body_prior')
+
 sys.path.append('HMP/')
 # print(sys.path)
 # print(torch.cuda.memory_summary())
 from HMP.fitting import run_prior
 
-from human_body_prior.tools.model_loader import load_model
-from human_body_prior.models.vposer_model import VPoser
 
 def set_seed(seed=42):
     """
