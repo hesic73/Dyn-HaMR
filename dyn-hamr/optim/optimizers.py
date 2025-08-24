@@ -366,7 +366,7 @@ class StageOptimizer(object):
                     self.cur_loss
                     - 0.04 * stats_dict["pose_prior"].detach().cpu().item()
                 )
-            print(loss, loss.shape, stats_dict, loss.requires_grad)
+            # print(loss, loss.shape, stats_dict, loss.requires_grad)
             loss.backward()
             # print('end of loss backward')
             return loss

@@ -135,7 +135,7 @@ class CameraParams(Params):
         returns (T, 3, 3), (T, 3)
         """
         cam_R, cam_t = self._cam_R, self._cam_t
-        print('get_extrinsics')
+        # print('get_extrinsics')
         if self.opt_cams:
             raise ValueError
             print('self.opt_cams:', self.opt_cams)

@@ -476,7 +476,7 @@ class RootLoss(StageLoss):
             loss += self.loss_weights["cam_t_smooth"] * cur_loss
             stats_dict["cam_t_smooth"] = cur_loss
 
-        print(stats_dict)
+        # print(stats_dict)
         return loss, stats_dict
 
 
@@ -548,7 +548,7 @@ class SMPLLoss(RootLoss):
                 loss += self.loss_weights["penetration"] * cur_loss
                 stats_dict["penetration"] = cur_loss
 
-        print(stats_dict)
+        # print(stats_dict)
         # if 'penetration' in stats_dict.keys():
         #     if stats_dict['penetration'] == 0:
         #         print(pred_data)

@@ -1,14 +1,9 @@
 import os
 
 ROOT_DIR = os.path.abspath(f"{__file__}/../../../")
-SRC_DIR = os.path.join(ROOT_DIR, "third-party/DROID-SLAM")
 print("PROJ SRC", ROOT_DIR)
-print("DROID SRC", SRC_DIR)
 
 import sys
-
-sys.path.append(SRC_DIR)
-sys.path.append(f"{SRC_DIR}/droid_slam")
 
 import glob
 import shutil
@@ -23,9 +18,8 @@ import numpy as np
 import torch
 
 from lietorch import SE3
-from droid import Droid
+from droid_slam.droid import Droid
 import droid_backends
-
 
 def get_image(image):
     return image.permute(1, 2, 0).cpu().numpy()[..., ::-1]

@@ -101,7 +101,7 @@ class BaseSceneModel(nn.Module):
         if self.use_init and "init_root_orient" in obs_data:
             init_rot = obs_data["init_root_orient"]  # (B, T, 3)
             init_rot_mat = angle_axis_to_rotation_matrix(init_rot)
-            print(R_c2w.shape, init_rot_mat.shape)
+            # print(R_c2w.shape, init_rot_mat.shape)
             init_rot_mat = torch.einsum("tij,btjk->btik", R_c2w, init_rot_mat)
             init_rot = rotation_matrix_to_angle_axis(init_rot_mat)
         else:

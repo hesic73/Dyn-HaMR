@@ -43,13 +43,6 @@ import time
 
 N_STAGES = 3
 
-import sys
-
-sys.path.append('HMP/')
-# print(sys.path)
-# print(torch.cuda.memory_summary())
-from HMP.fitting import run_prior
-
 
 def set_seed(seed=42):
     """
@@ -161,6 +154,9 @@ def run_opt(cfg, dataset, out_dir, device):
 
     # HMP
     if cfg.run_prior and not os.path.exists(os.path.join(out_dir, 'prior')):
+        import sys
+        sys.path.append('HMP/')
+        from HMP.fitting import run_prior
         run_prior(cfg, dataset, out_dir, device, ['smooth_fit'], \
         obs_data, hand_model, cfg, cfg.data, os.path.join(out_dir, 'prior'))
     d = time.time()

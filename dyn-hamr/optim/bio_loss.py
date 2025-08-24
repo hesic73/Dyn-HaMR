@@ -278,7 +278,7 @@ class BMCLoss:
         '''
         
         joints = ori_joints[valid_mask]
-        print(joints.shape, ori_joints.shape)
+        # print(joints.shape, ori_joints.shape)
         batch_size = joints.shape[0]
         final_loss = torch.Tensor([0]).cuda()
 
