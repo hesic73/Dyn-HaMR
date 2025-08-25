@@ -41,6 +41,8 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 import time
 
+from loguru import logger
+
 N_STAGES = 3
 
 
@@ -69,6 +71,7 @@ def run_opt(cfg, dataset, out_dir, device):
     print("Batch size (dataset_length), T (dataset.seq_len): ", B, len(dataset), T)
     print("OBS DATA", obs_data.keys())
     print("CAM DATA", cam_data.keys(), 'cam_R', cam_data['cam_R'])
+    exit()
 
     # save cameras
     cam_R, cam_t = dataset.cam_data.cam2world()
@@ -176,9 +179,9 @@ def main(cfg: DictConfig):
     Logger.init(f"{out_dir}/opt_log.txt")
 
     # make sure we get all necessary inputs
-    print("init SOURCES", cfg.data.sources)
     cfg.data.sources = expand_source_paths(cfg.data.sources)
-    print("SOURCES", cfg.data.sources)
+
+    logger.info(f"Sources: {cfg.data.sources}")
 
     dataset = get_dataset_from_cfg(cfg)
     save_track_info(dataset, out_dir)

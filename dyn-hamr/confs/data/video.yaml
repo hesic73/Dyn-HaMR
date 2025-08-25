@@ -5,11 +5,6 @@ video_dir: videos
 seq: demo1
 ext: mp4
 src_path: ${data.root}/${data.video_dir}/${data.seq}.${data.ext}
-frame_opts:
-  ext: jpg
-  fps: 25
-  start_sec: 0
-  end_sec: -1
 use_cams: True
 track_ids: "all"
 shot_idx: 0

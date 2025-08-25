@@ -4,36 +4,41 @@ import subprocess
 
 import preproc.launch_hamer as hamer
 from preproc.launch_slam import split_frames_shots, get_command, check_intrins
-from preproc.extract_frames import video_to_frames, split_frame
+from preproc.extract_frames import split_frame
+
+from loguru import logger
 
 
 def is_nonempty(d):
     return os.path.isdir(d) and len(os.listdir(d)) > 0
 
 
-def preprocess_frames(img_dir, src_path, overwrite=False, **kwargs):
+def preprocess_frames(img_dir: str, src_path: str, overwrite: bool = False):
+    """
+    Extract frames from a video file.
+    """
     if not overwrite and is_nonempty(img_dir):
-        print(f"FOUND {len(os.listdir(img_dir))} FRAMES in {img_dir}")
+        logger.info(
+            f"Found {len(os.listdir(img_dir))} frames in {img_dir}, skipping extraction.")
         return
-    print(f"EXTRACTING FRAMES FROM {src_path} TO {img_dir}")
-    print(kwargs)
+    logger.info(f"Extracting frames from {src_path} to {img_dir}.")
 
-    # out = video_to_frames(src_path, img_dir, overwrite=overwrite, **kwargs)
-    out = split_frame(src_path, img_dir, overwrite=overwrite, **kwargs)
-    assert out == 0, "FAILED FRAME EXTRACTION"
+    out = split_frame(src_path, img_dir)
+    if out < 1:
+        raise ValueError("No frames extracted!")
 
 
-def preprocess_tracks(datatype, img_dir, track_dir, shot_dir, gpu, overwrite=False):
+def preprocess_tracks(datatype: str, img_dir: str, track_dir: str, shot_dir: str, gpu: int, overwrite: bool = False):
     """
     :param img_dir
     :param track_dir, expected format: res_root/track_name/sequence
     :param shot_dir, expected format: res_root/shot_name/sequence
     """
     if not overwrite and is_nonempty(track_dir):
-        print(f"FOUND TRACKS IN {track_dir}")
+        logger.info(f"Found tracks in {track_dir}, skipping preprocessing.")
         return
 
-    print(f"RUNNING HAMER ON {img_dir}")
+    logger.info(f"Running HaMeR on {img_dir}")
     track_root, seq = os.path.split(track_dir.rstrip("/"))
     res_root, track_name = os.path.split(track_root)
     shot_name = shot_dir.rstrip("/").split("/")[-2]
@@ -50,17 +55,20 @@ def preprocess_tracks(datatype, img_dir, track_dir, shot_dir, gpu, overwrite=Fal
     )
 
 
-def preprocess_cameras(cfg, overwrite=False):
+def preprocess_cameras(cfg, overwrite: bool = False):
     if not overwrite and is_nonempty(cfg.sources.cameras):
-        print(f"FOUND CAMERAS IN {cfg.sources.cameras}")
+        logger.info(
+            f"Found cameras in {cfg.sources.cameras}, skipping preprocessing.")
         return
 
-    print(f"RUNNING SLAM ON {cfg.seq}")
+    logger.info(f"Running SLAM on {cfg.seq}")
     img_dir = cfg.sources.images
     map_dir = cfg.sources.cameras
-    subseqs, shot_idcs = split_frames_shots(cfg.sources.images, cfg.sources.shots)
-    print(shot_idcs, cfg.shot_idx, np.where(shot_idcs == cfg.shot_idx), cfg.sources.images, cfg.sources.shots)
-    print(subseqs)
+    subseqs, shot_idcs = split_frames_shots(
+        cfg.sources.images, cfg.sources.shots)
+    logger.info(
+        f"Shot indices: {shot_idcs}, Current shot index: {cfg.shot_idx}, Matched shot index: {np.where(shot_idcs == cfg.shot_idx)}")
+    logger.info(f"Subsequences: {subseqs}")
     shot_idx = np.where(shot_idcs == cfg.shot_idx)[0][0]
     # run on selected shot
     start, end = subseqs[shot_idx]
@@ -70,10 +78,12 @@ def preprocess_cameras(cfg, overwrite=False):
         start = start + cfg.start_idx
     intrins_path = cfg.sources.get("intrins", None)
     if intrins_path is not None:
-        intrins_path = check_intrins(cfg.type, cfg.root, intrins_path, cfg.seq, cfg.split)
+        intrins_path = check_intrins(
+            cfg.type, cfg.root, intrins_path, cfg.seq, cfg.split)
 
-    print('img_dir, map_dir, start, end, intrins_path', img_dir, map_dir, start, end, intrins_path)
-    # raise ValueERRROR
+    print('img_dir, map_dir, start, end, intrins_path',
+          img_dir, map_dir, start, end, intrins_path)
+
     cmd = get_command(
         img_dir,
         map_dir,
@@ -82,7 +92,7 @@ def preprocess_cameras(cfg, overwrite=False):
         intrins_path=intrins_path,
         overwrite=overwrite,
     )
-    print(cmd)
-    gpu = os.environ.get("CUDA_VISIBLE_DEVICES", 0)
+    logger.info(f"Running command:\n{cmd}")
+    gpu = cfg.gpu
     out = subprocess.call(f"CUDA_VISIBLE_DEVICES={gpu} {cmd}", shell=True)
     assert out == 0, "SLAM FAILED"

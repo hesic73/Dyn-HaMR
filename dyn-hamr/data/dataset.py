@@ -1,3 +1,10 @@
+from typing import List, Tuple, Dict
+from loguru import logger
+from .vidproc import preprocess_cameras, preprocess_frames, preprocess_tracks
+from .tools import read_keypoints, read_mask_path, load_mano_preds
+from geometry.camera import invert_camera
+from util.logger import Logger
+import time
 import os
 import glob
 import typing
@@ -12,13 +19,6 @@ from torch.utils.data import Dataset
 
 from body_model import MANO_JOINTS
 assert len(MANO_JOINTS) == 16
-import time
-
-from util.logger import Logger
-from geometry.camera import invert_camera
-
-from .tools import read_keypoints, read_mask_path, load_mano_preds
-from .vidproc import preprocess_cameras, preprocess_frames, preprocess_tracks
 
 
 """
@@ -40,10 +40,7 @@ def get_dataset_from_cfg(cfg):
         args.sources.cameras = ""
 
     args.sources = expand_source_paths(args.sources)
-    print("DATA SOURCES", args.sources)
-    a = time.time()
     check_data_sources(args, cfg)
-    print('end of check_data_sources, time: ', time.time() - a)
 
     return MultiPeopleDataset(
         args.sources,
@@ -57,14 +54,14 @@ def get_dataset_from_cfg(cfg):
     )
 
 
-def expand_source_paths(data_sources):
+def expand_source_paths(data_sources: Dict[str, str]) -> Dict[str, str]:
     return {k: get_data_source(v) for k, v in data_sources.items()}
 
 
-def get_data_source(source):
+def get_data_source(source: str) -> str:
     matches = glob.glob(source)
     if len(matches) < 1:
-        print(f"{source} does not exist")
+        logger.warning(f"{source} does not exist")
         return source  # return anyway for default values
     if len(matches) > 1:
         raise ValueError(f"{source} is not unique")
@@ -75,13 +72,21 @@ def check_data_sources(args, cfg):
     print()
     a = time.time()
     if args.type == "video":
-        preprocess_frames(args.sources.images, args.src_path, **args.frame_opts)
+        preprocess_frames(args.sources.images,
+                          args.src_path)
     b = time.time()
-    preprocess_tracks(cfg.datatype, args.sources.images, args.sources.tracks, args.sources.shots, gpu=cfg.gpu)
+    preprocess_tracks(cfg.datatype, args.sources.images,
+                      args.sources.tracks, args.sources.shots, gpu=cfg.gpu)
     c = time.time()
     preprocess_cameras(args, overwrite=args.get("overwrite_cams", False))
     d = time.time()
-    print('frame, hand track, slam camera: ', b-a, c-b, d-c)
+
+    t_preprocess_frames = b-a
+    t_preprocess_tracks = c-b
+    t_preprocess_cameras = d-c
+    logger.info(f"Preprocess frames time: {t_preprocess_frames:.2f}s")
+    logger.info(f"Preprocess tracks time: {t_preprocess_tracks:.2f}s")
+    logger.info(f"Preprocess cameras time: {t_preprocess_cameras:.2f}s")
 
 
 class MultiPeopleDataset(Dataset):
@@ -137,7 +142,7 @@ class MultiPeopleDataset(Dataset):
             print("raw TRACK IDS and LENGTHS", track_ids, track_lens)
             track_ids = [
                 track_ids[i]
-                for i in range(len(track_lens))# np.argsort(track_lens)[::-1]
+                for i in range(len(track_lens))  # np.argsort(track_lens)[::-1]
                 if track_lens[i] > MIN_TRACK_LEN
             ]
             print("TRACK LENGTHS", track_ids, track_lens)
@@ -156,7 +161,8 @@ class MultiPeopleDataset(Dataset):
         eidx = -1
         self.track_vis_masks = []
         for pred_dir in self.track_dirs:
-            kp_paths = [f"{pred_dir}/{x}_keypoints.json" for x in self.img_names]
+            kp_paths = [
+                f"{pred_dir}/{x}_keypoints.json" for x in self.img_names]
             has_kp = [os.path.isfile(x) for x in kp_paths]
 
             # keep track of which frames this track is visible in
@@ -244,7 +250,7 @@ class MultiPeopleDataset(Dataset):
                 pred_paths, tid=tid, interp=interp_input
             )
 
-            n_joints = len(MANO_JOINTS) - 1 # 15
+            n_joints = len(MANO_JOINTS) - 1  # 15
             data_out["init_body_pose"].append(pose_init)
             data_out["init_body_shape"].append(betas_init)
             data_out["init_root_orient"].append(orient_init)
@@ -266,12 +272,15 @@ class MultiPeopleDataset(Dataset):
         obs_data["joints2d"] = torch.Tensor(joint2d_data)
 
         # single frame predictions
-        obs_data["init_body_pose"] = torch.Tensor(self.data_dict["init_body_pose"][idx])
-        obs_data["init_body_shape"] = torch.Tensor(self.data_dict["init_body_shape"][idx])
+        obs_data["init_body_pose"] = torch.Tensor(
+            self.data_dict["init_body_pose"][idx])
+        obs_data["init_body_shape"] = torch.Tensor(
+            self.data_dict["init_body_shape"][idx])
         obs_data["init_root_orient"] = torch.Tensor(
             self.data_dict["init_root_orient"][idx]
         )
-        obs_data["init_trans"] = torch.Tensor(self.data_dict["init_trans"][idx])
+        obs_data["init_trans"] = torch.Tensor(
+            self.data_dict["init_trans"][idx])
         obs_data["is_right"] = torch.Tensor(self.data_dict["is_right"][idx])
 
         # floor plane
@@ -289,7 +298,8 @@ class MultiPeopleDataset(Dataset):
             self.data_dict["track_interval"][idx]
         ).int()
 
-        print(len(self.track_ids), self.track_ids[idx], obs_data["is_right"].shape, obs_data["seq_interval"].shape)
+        print(len(self.track_ids),
+              self.track_ids[idx], obs_data["is_right"].shape, obs_data["seq_interval"].shape)
 
         obs_data["track_id"] = int(self.track_ids[idx])
         # print(self.track_ids[idx], obs_data["is_right"])
@@ -334,7 +344,8 @@ class CameraData(object):
             eidx += data_len + 1
 
         self.sidx, self.eidx = sidx + data_start, eidx + data_start
-        print(self.sidx, self.eidx, data_start, data_end, data_interval, track_interval)
+        print(self.sidx, self.eidx, data_start,
+              data_end, data_interval, track_interval)
 #
         self.seq_len = self.eidx - self.sidx
 
@@ -347,7 +358,8 @@ class CameraData(object):
         fpath = os.path.join(self.cam_dir, "cameras.npz")
         if os.path.isfile(fpath) and not self.is_static:
             Logger.log(f"Loading cameras from {fpath}...")
-            cam_R, cam_t, intrins, width, height = load_cameras_npz(fpath, self.seq_len)
+            cam_R, cam_t, intrins, width, height = load_cameras_npz(
+                fpath, self.seq_len)
             scale = img_w / width
             self.intrins = scale * intrins[sidx:eidx]
             # move first camera to origin
@@ -360,7 +372,8 @@ class CameraData(object):
             self.cam_t = cam_t[sidx:eidx] - t0
         else:
             # raise ValueError
-            Logger.log(f"WARNING: {fpath} does not exist, using static cameras...")
+            Logger.log(
+                f"WARNING: {fpath} does not exist, using static cameras...")
             default_focal = 0.5 * (img_h + img_w)
             self.intrins = torch.tensor(
                 [default_focal, default_focal, img_w / 2, img_h / 2]
@@ -370,7 +383,8 @@ class CameraData(object):
             self.cam_t = torch.zeros(self.seq_len, 3)
 
         Logger.log(f"Images have {img_w}x{img_h}, intrins {self.intrins[0]}")
-        print("CAMERA DATA", self.cam_R.shape, self.cam_t.shape, self.intrins[0])
+        print("CAMERA DATA", self.cam_R.shape,
+              self.cam_t.shape, self.intrins[0])
 
     def world2cam(self):
         return self.cam_R, self.cam_t
@@ -447,7 +461,8 @@ def load_cameras_npz(camera_path, v):
     if "intrins" in cam_data:
         intrins = torch.from_numpy(cam_data["intrins"].astype(np.float32))
     else:
-        intrins = torch.tensor([focal, focal, width / 2, height / 2])[None].repeat(N, 1)
+        intrins = torch.tensor(
+            [focal, focal, width / 2, height / 2])[None].repeat(N, 1)
 
     print(f"Loaded {N} cameras")
     return cam_R, cam_t, intrins, width, height
