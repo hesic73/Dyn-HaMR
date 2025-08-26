@@ -165,7 +165,7 @@ def load_camera_json(path):
     return R.float(), t.float(), intrins.float()
 
 
-def save_camera_json(path, cam_R, cam_t, intrins):
+def save_camera_json(path: str, cam_R: torch.Tensor, cam_t: torch.Tensor, intrins: torch.Tensor):
     """
     :param path
     :param cam_R (N, 3, 3)

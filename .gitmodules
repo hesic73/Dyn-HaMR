@@ -2,3 +2,6 @@
 	path = third-party/hamer
 	url = https://github.com/ZhengdiYu/hamer.git
 	branch = dynamic-hamer
+[submodule "third-party/DROID-SLAM"]
+	path = third-party/DROID-SLAM
+	url = git@github.com:hesic73/DROID-SLAM.git

@@ -37,7 +37,8 @@ def launch_hamer(gpus, seq, img_dir, res_dir, name, datatype, overwrite=False):
 
     cmd = " ".join(cmd_args)
     print(cmd)
-    return subprocess.call(cmd, shell=True)
+    env = os.environ.copy()
+    return subprocess.call(cmd, shell=True, env=env)
 
 
 def process_seq(

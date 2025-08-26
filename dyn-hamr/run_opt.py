@@ -71,7 +71,6 @@ def run_opt(cfg, dataset, out_dir, device):
     print("Batch size (dataset_length), T (dataset.seq_len): ", B, len(dataset), T)
     print("OBS DATA", obs_data.keys())
     print("CAM DATA", cam_data.keys(), 'cam_R', cam_data['cam_R'])
-    exit()
 
     # save cameras
     cam_R, cam_t = dataset.cam_data.cam2world()
@@ -169,7 +168,7 @@ def run_opt(cfg, dataset, out_dir, device):
 @hydra.main(version_base=None, config_path="confs", config_name="config.yaml")
 def main(cfg: DictConfig):
     OmegaConf.register_new_resolver("eval", eval)
-    print('run_opt.py: ', cfg)
+    print(OmegaConf.to_yaml(cfg))
 
     # Set random seed
     set_seed(cfg.get('seed', 42))

@@ -93,6 +93,6 @@ def preprocess_cameras(cfg, overwrite: bool = False):
         overwrite=overwrite,
     )
     logger.info(f"Running command:\n{cmd}")
-    gpu = cfg.gpu
+    gpu = os.environ.get("CUDA_VISIBLE_DEVICES", "0")
     out = subprocess.call(f"CUDA_VISIBLE_DEVICES={gpu} {cmd}", shell=True)
     assert out == 0, "SLAM FAILED"
