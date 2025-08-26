@@ -120,21 +120,11 @@ def get_command(img_dir, out_dir, start=0, end=-1, intrins_path=None, overwrite=
     cmd = " ".join(cmd_args)
     return cmd
 
-
-def check_intrins(data_type, data_root, intrins_path, img_dir):
-    assert intrins_path is not None
-    out_name = intrins_path.split(data_root)[1].strip("/").split("/")[0]
-    out_root = f"{data_root}/{out_name}"
-    return intrins_path
-
-
 def get_slam_command(args, img_dir, seq, shot_idx=None, start=0, end=-1):
     out_dir = get_out_dir(args, seq, shot_idx, start, end)
     intrins_path = None
     if args.use_intrins:
         intrins_path = get_intrins_path(args.type, args.root, seq)
-        if intrins_path is not None:
-            intrins_path = check_intrins(args.type, args.root, intrins_path, img_dir)
     return get_command(
         img_dir,
         out_dir,

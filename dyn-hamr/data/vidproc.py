@@ -3,7 +3,7 @@ import numpy as np
 import subprocess
 
 import preproc.launch_hamer as hamer
-from preproc.launch_slam import split_frames_shots, get_command, check_intrins
+from preproc.launch_slam import split_frames_shots, get_command
 from preproc.extract_frames import split_frame
 
 from loguru import logger
@@ -19,7 +19,8 @@ def preprocess_frames(img_dir: str, src_path: str, overwrite: bool = False):
     """
     if not overwrite and is_nonempty(img_dir):
         logger.info(
-            f"Found {len(os.listdir(img_dir))} frames in {img_dir}, skipping extraction.")
+            f"Found {len(os.listdir(img_dir))} frames in {img_dir}, skipping extraction."
+        )
         return
     logger.info(f"Extracting frames from {src_path} to {img_dir}.")
 
@@ -28,7 +29,14 @@ def preprocess_frames(img_dir: str, src_path: str, overwrite: bool = False):
         raise ValueError("No frames extracted!")
 
 
-def preprocess_tracks(datatype: str, img_dir: str, track_dir: str, shot_dir: str, gpu: int, overwrite: bool = False):
+def preprocess_tracks(
+    datatype: str,
+    img_dir: str,
+    track_dir: str,
+    shot_dir: str,
+    gpu: int,
+    overwrite: bool = False,
+):
     """
     :param img_dir
     :param track_dir, expected format: res_root/track_name/sequence
@@ -57,17 +65,16 @@ def preprocess_tracks(datatype: str, img_dir: str, track_dir: str, shot_dir: str
 
 def preprocess_cameras(cfg, overwrite: bool = False):
     if not overwrite and is_nonempty(cfg.sources.cameras):
-        logger.info(
-            f"Found cameras in {cfg.sources.cameras}, skipping preprocessing.")
+        logger.info(f"Found cameras in {cfg.sources.cameras}, skipping preprocessing.")
         return
 
     logger.info(f"Running SLAM on {cfg.seq}")
     img_dir = cfg.sources.images
     map_dir = cfg.sources.cameras
-    subseqs, shot_idcs = split_frames_shots(
-        cfg.sources.images, cfg.sources.shots)
+    subseqs, shot_idcs = split_frames_shots(cfg.sources.images, cfg.sources.shots)
     logger.info(
-        f"Shot indices: {shot_idcs}, Current shot index: {cfg.shot_idx}, Matched shot index: {np.where(shot_idcs == cfg.shot_idx)}")
+        f"Shot indices: {shot_idcs}, Current shot index: {cfg.shot_idx}, Matched shot index: {np.where(shot_idcs == cfg.shot_idx)}"
+    )
     logger.info(f"Subsequences: {subseqs}")
     shot_idx = np.where(shot_idcs == cfg.shot_idx)[0][0]
     # run on selected shot
@@ -77,12 +84,11 @@ def preprocess_cameras(cfg, overwrite: bool = False):
         end = start + cfg.end_idx
         start = start + cfg.start_idx
     intrins_path = cfg.sources.get("intrins", None)
-    if intrins_path is not None:
-        intrins_path = check_intrins(
-            cfg.type, cfg.root, intrins_path, cfg.seq, cfg.split)
 
-    print('img_dir, map_dir, start, end, intrins_path',
-          img_dir, map_dir, start, end, intrins_path)
+    logger.info(f"Image dir: {img_dir}")
+    logger.info(f"Map dir: {map_dir}")
+    logger.info(f"Start: {start}, End: {end}")
+    logger.info(f"Intrins path: {intrins_path}")
 
     cmd = get_command(
         img_dir,

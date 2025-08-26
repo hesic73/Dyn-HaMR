@@ -7,6 +7,8 @@ conda create -n $CONDA_ENV_NAME python=3.10 -y
 
 conda activate $CONDA_ENV_NAME
 
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+pip install torch-scatter -f https://data.pyg.org/whl/torch-2.7.0+cu118.html
 
 pip install -r requirements.txt
 

@@ -21,6 +21,9 @@ from lietorch import SE3
 from droid_slam.droid import Droid
 import droid_backends
 
+from typing import List
+
+
 def get_image(image):
     return image.permute(1, 2, 0).cpu().numpy()[..., ::-1]
 
@@ -49,13 +52,11 @@ def get_image_files(img_dir, stride, start=0, end=-1):
     return [os.path.join(img_dir, name) for name in image_list[start:end:stride]]
 
 
-def load_intrins(intrins_path, image_files, start=0, end=-1):
+def load_intrins(
+    intrins_path: str, image_files: List[str], start: int = 0, end: int = -1
+):
     N = len(image_files)
     H, W, F = get_hwf(image_files[0])
-    # intrinsics for default FOV
-    default = torch.tensor([F, F, W / 2, H / 2, W, H])[None].repeat(N, 1)
-    if intrins_path is None:
-        return default
     assert os.path.isfile(intrins_path), f"{intrins_path} DOES NOT EXIST"
     assert intrins_path.endswith(".txt"), f"{intrins_path} INCORRECT EXT"
 

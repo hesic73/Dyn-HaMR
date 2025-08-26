@@ -151,3 +151,5 @@ dmypy.json
 
 
 *.png
+
+/dyn-hamr/_video_root
