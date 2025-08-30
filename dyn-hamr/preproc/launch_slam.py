@@ -2,7 +2,7 @@ import os
 import glob
 import json
 import numpy as np
-
+from typing import Optional
 import subprocess
 from concurrent import futures
 import multiprocessing as mp
@@ -42,7 +42,7 @@ def split_frames_shots(img_dir, shot_path, pad_shot=0, min_len=0):
         print(f"{shot_path} DOES NOT EXIST, USING WHOLE SEQUENCE")
         return [(0, -1)], [0]
 
-    image_list = sorted(list(filter(isimage, os.listdir(img_dir))))#[:500]
+    image_list = sorted(list(filter(isimage, os.listdir(img_dir))))  # [:500]
     num_frames = len(image_list)
 
     with open(shot_path, "r") as f:
@@ -97,7 +97,7 @@ def get_intrins_path(data_type, data_root, seq):
     raise NotImplementedError
 
 
-def get_command(img_dir, out_dir, start=0, end=-1, intrins_path=None, overwrite=False):
+def get_command(img_dir: str, out_dir: str, start: int = 0, end: int = -1, intrins_path: Optional[str] = None, overwrite: bool = False):
     cmd_args = [
         f"python {SRC_DIR}/run_slam.py",
         "-i",
@@ -119,6 +119,7 @@ def get_command(img_dir, out_dir, start=0, end=-1, intrins_path=None, overwrite=
 
     cmd = " ".join(cmd_args)
     return cmd
+
 
 def get_slam_command(args, img_dir, seq, shot_idx=None, start=0, end=-1):
     out_dir = get_out_dir(args, seq, shot_idx, start, end)
@@ -149,7 +150,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type", default="posetrack", help="dataset to process")
+    parser.add_argument("--type", default="posetrack",
+                        help="dataset to process")
     parser.add_argument(
         "--root", default=None, help="root of data to process, default None"
     )

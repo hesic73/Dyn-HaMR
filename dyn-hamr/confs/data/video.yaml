@@ -1,6 +1,7 @@
 type: video
 split: custom
-root: /home/hsc/25fall/Dyn-HaMR-root  # put your videos in root/videos/vid.mp4
+# NOTE (hsc): 这里我在dyn-hamr下面创建一个软链接，指向vieo_root
+root: null  # put your videos in root/videos/vid.mp4
 video_dir: videos
 seq: demo1
 ext: mp4
@@ -15,5 +16,6 @@ name: ${data.seq}-${data.track_ids}-shot-${data.shot_idx}-${data.start_idx}-${da
 sources:
   images: ${data.root}/images/${data.seq}
   cameras: ${data.root}/dynhamr/cameras/${data.seq}/shot-${data.shot_idx}
+  intrins: "/home/sichenghe/25fall/Dyn-HaMR/dyn-hamr/_video_root/videos/demo1_intrinsics.txt"
   tracks: ${data.root}/dynhamr/track_preds/${data.seq}
   shots: ${data.root}/dynhamr/shot_idcs/${data.seq}.json
