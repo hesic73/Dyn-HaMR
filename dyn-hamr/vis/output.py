@@ -15,6 +15,8 @@ from util.tensor import detach_all, to_torch, move_to
 from .fig_specs import get_seq_figure_skip, get_seq_static_lookat_points
 from .tools import mesh_to_geometry, smooth_results
 
+from typing import List
+
 
 def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
     """
@@ -149,7 +151,7 @@ def animate_scene(
     out_name,
     seq_name=None,
     accumulate=False,
-    render_views=["src_cam", "front", "above", "side"],
+    render_views:List[str]=["src_cam", "front", "above", "side"],
     render_bg=True,
     render_cam=True,
     render_ground=True,

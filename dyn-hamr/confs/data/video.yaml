@@ -16,6 +16,6 @@ name: ${data.seq}-${data.track_ids}-shot-${data.shot_idx}-${data.start_idx}-${da
 sources:
   images: ${data.root}/images/${data.seq}
   cameras: ${data.root}/dynhamr/cameras/${data.seq}/shot-${data.shot_idx}
-  intrins: "/home/sichenghe/25fall/Dyn-HaMR/dyn-hamr/_video_root/videos/demo1_intrinsics.txt"
+  # intrins: "/home/sichenghe/25fall/Dyn-HaMR/dyn-hamr/_video_root/videos/demo1_intrinsics.txt"
   tracks: ${data.root}/dynhamr/track_preds/${data.seq}
   shots: ${data.root}/dynhamr/shot_idcs/${data.seq}.json

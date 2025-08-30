@@ -171,7 +171,7 @@ def main(cfg: DictConfig):
     OmegaConf.register_new_resolver("eval", eval)
     # NOTE (hsc): 这里我在dyn-hamr下面创建一个软链接，指向vieo_root
     cfg.data.root=str(Path(__file__).parent/"_video_root")
-    print(OmegaConf.to_yaml(cfg))
+    # print(OmegaConf.to_yaml(cfg))
 
     # Set random seed
     set_seed(cfg.get('seed', 42))

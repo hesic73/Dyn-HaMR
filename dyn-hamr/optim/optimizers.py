@@ -14,12 +14,14 @@ from util.logger import Logger, log_cur_stats
 from util.tensor import move_to, detach_all
 from vis.output import prep_result_vis, animate_scene
 
-from .losses import RootLoss, SMPLLoss #, MotionLoss
+from .losses import RootLoss, SMPLLoss  # , MotionLoss
 from .output import save_camera_json
 import time
 
+from loguru import logger
+
 LINE_SEARCH = "strong_wolfe"
-LIGHT_BLUE=(0.65098039,  0.74117647,  0.85882353)
+LIGHT_BLUE = (0.65098039,  0.74117647,  0.85882353)
 
 """
 Optimization happens in multiple stages
@@ -98,7 +100,8 @@ class StageOptimizer(object):
             optim_dict = torch.load(optim_path)
             self.optim.load_state_dict(optim_dict["optim"])
             self.cur_step = optim_dict["cur_step"]
-            Logger.log(f"Optimizer loaded from {optim_path} at iter {self.cur_step}")
+            Logger.log(
+                f"Optimizer loaded from {optim_path} at iter {self.cur_step}")
 
     def save_checkpoint(self, out_dir):
         param_path = os.path.join(out_dir, f"{self.name}_params.pth")
@@ -133,12 +136,11 @@ class StageOptimizer(object):
 
         i = self.cur_step
         for name, results in pred_dict.items():
-            print('save_results, name: ', name)
             # save parameters of trajectory
             out_path = f"{out_dir}/{seq_name}_{i:06d}_{name}_results.npz"
             Logger.log(f"saving params to {out_path}")
             np.savez(out_path, **results)
-            print('cam_R in save_results and its .npz', results['cam_R'])
+            logger.info(f"Save {name} results to {out_path}\nKeys: {list(results.keys())}")
 
         # also save the cameras
         # print('save the cameras in ptimizer.py save_results')
@@ -233,7 +235,8 @@ class StageOptimizer(object):
             ),
             "cpu",
         )
-        animate_scene(vis, scene_dict, res_pre, render_views=["src_cam", "above"])
+        animate_scene(vis, scene_dict, res_pre,
+                      render_views=["src_cam", "above"])
 
     def log_losses(self, stats_dict):
         stats_dict = move_to(detach_all(stats_dict), "cpu")
@@ -258,7 +261,8 @@ class StageOptimizer(object):
 
         for loss_name, loss_dict in self.loss_dicts.items():
             loss_mean = np.mean(loss_dict[self.cur_step])
-            writer.add_scalar(f"{self.name}/{loss_name}", loss_mean, self.cur_step)
+            writer.add_scalar(f"{self.name}/{loss_name}",
+                              loss_mean, self.cur_step)
 
     def plot_losses(self, res_dir):
         """
@@ -288,7 +292,8 @@ class StageOptimizer(object):
 
         if self.cur_step >= num_iters:
             Logger.log(f"Current optimizer {self}")
-            Logger.log(f"Checkpoint at {self.cur_step} >= {num_iters}, skipping")
+            Logger.log(
+                f"Checkpoint at {self.cur_step} >= {num_iters}, skipping")
             return
 
         Logger.log(f"OPTIMIZING {self.name} FOR {num_iters} ITERATIONS")
@@ -313,7 +318,7 @@ class StageOptimizer(object):
             self.cur_step = i
             self.loss.cur_step = i
 
-            #print("ITER: %d" % (i))
+            # print("ITER: %d" % (i))
             self.optim_step(obs_data, i, writer)
 
             # early termination in case of nans
@@ -352,9 +357,9 @@ class StageOptimizer(object):
     def optim_step(self, obs_data, i, writer=None):
         def closure():
             self.optim.zero_grad()
-            #print('******************************', i)
+            # print('******************************', i)
             loss, stats_dict, preds = self.forward_pass(obs_data)
-            #print('******************************', i)
+            # print('******************************', i)
             stats_dict["total"] = loss
             self.log_losses(move_to(detach_all(stats_dict), "cpu"))
             self.cur_loss = stats_dict["total"].detach().cpu().item()
@@ -371,9 +376,9 @@ class StageOptimizer(object):
             # print('end of loss backward')
             return loss
 
-        #print('!!!!!!!!!!!!!!!!!!!!!!!!!!', i)
+        # print('!!!!!!!!!!!!!!!!!!!!!!!!!!', i)
         self.optim.step(closure)
-        #print('!!!!!!!!!!!!!!!!!!!!!!!!!!', i)
+        # print('!!!!!!!!!!!!!!!!!!!!!!!!!!', i)
         if writer is not None:
             self.record_current_losses(writer)
 
@@ -472,7 +477,8 @@ class SmoothOptimizer(StageOptimizer):
 
         # compute data losses only
         vis_mask = obs_data["vis_mask"] >= 0
-        loss, stats_dict = self.loss(obs_data, pred_data, self.model.seq_len, vis_mask)
+        loss, stats_dict = self.loss(
+            obs_data, pred_data, self.model.seq_len, vis_mask)
         return loss, stats_dict, pred_data
 
 
