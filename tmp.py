@@ -4,6 +4,12 @@ import pyrealsense2 as rs
 from typing import Optional
 import open3d as o3d
 
+
+def list_realsense_devices():
+    ctx = rs.context()
+    devices = ctx.query_devices()
+    return [device.get_info(rs.camera_info.serial_number) for device in devices]
+
 def get_camera_image(cam: str, resolution: tuple[int, int] = (848, 480), exposure: Optional[int] = None):
     """
     Captures color and depth images from a Realsense camera.
@@ -91,7 +97,9 @@ def get_pointcloud_from_intrinsics(color: np.ndarray, depth: np.ndarray, intrins
 
 
 if __name__ == '__main__':
-    cam_serial = "147122073100"
+    cam_serial = list_realsense_devices()
+    assert len(cam_serial) == 1, "Please connect exactly one Realsense camera."
+    cam_serial = cam_serial[0]
 
     # Example 1: Use a specific resolution (e.g., 848x480)
     color, depth = get_camera_image(cam_serial, resolution=(848, 480))

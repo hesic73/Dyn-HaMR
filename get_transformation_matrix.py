@@ -19,7 +19,7 @@ def pose_to_transformation_matrix(pose: np.ndarray) -> np.ndarray:
 xml_content = """
 <launch>
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link_broadcaster"
-      args="0.394399 -0.614178 0.40473    -0.830114 -0.019339 0.0104715 0.55716 fr3_link0 camera_color_optical_frame" />
+      args="0.0333077 -0.0344275 -0.0403585   -0.0354012 -0.0346992 0.704407 0.708063 fr3_hand_tcp camera_color_optical_frame" />
 </launch>
 """
 
