@@ -41,7 +41,7 @@ qx, qy, qz, qw = args_floats[3:7]
 print(f"XYZ (Translation): ({x}, {y}, {z})")
 print(f"Quaternion (Rotation): ({qx}, {qy}, {qz}, {qw})")
 
-camera_pose = np.array([x, y, z, qx, qy, qz, qw])
+camera_pose = np.array([x, y, z, qw, qx, qy, qz])
 transformation_matrix = pose_to_transformation_matrix(camera_pose)
 
 print("Transformation Matrix:")
