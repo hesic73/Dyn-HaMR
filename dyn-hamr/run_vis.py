@@ -269,7 +269,7 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
 
     save_paths_all = []
     for res_dict, out_name in zip(res_dicts, out_names):
-        print(f'preparing resulst for rendering {out_name}')
+        print(f'preparing results for rendering {out_name}')
         # time.sleep(5)
         res_dict = move_to(res_dict, device)
         scene_dict = prep_result_vis(

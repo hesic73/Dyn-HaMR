@@ -30,7 +30,8 @@ def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
     with torch.no_grad():
         if temporal_smooth:
             print('running temporal smooth')
-            res["root_orient"], res["pose_body"], res['betas'], res["trans"] = smooth_results(res["root_orient"], res["pose_body"], res['betas'], res["is_right"], res["trans"])
+            res["root_orient"], res["pose_body"], res['betas'], res["trans"] = smooth_results(
+                res["root_orient"], res["pose_body"], res['betas'], res["is_right"], res["trans"])
 
         world_smpl = run_mano(
             body_model,
@@ -88,22 +89,25 @@ def build_scene_dict(
         min_height = float('inf')
         for frame_verts in verts:
             if len(frame_verts) > 0:
-                frame_min = frame_verts[..., 1].min().item()  # y-coordinate is height
+                # y-coordinate is height
+                frame_min = frame_verts[..., 1].min().item()
                 min_height = min(min_height, frame_min)
-        
+
         # Set ground plane further below minimum height
         ground_offset = -0.5  # 20cm below minimum height
         ground_height = min_height - ground_offset
-        
+
         # Create ground plane transform
         R = torch.eye(3)  # Identity rotation (flat ground)
-        t = torch.tensor([0.0, ground_height, 0.0])  # Translate to ground height
+        # Translate to ground height
+        t = torch.tensor([0.0, ground_height, 0.0])
         scene_dict["ground"] = cam_util.make_4x4_pose(R, t)
 
         # Save ground mesh for Blender debugging
         import trimesh
         from vis.viewer import make_checkerboard
-        ground_mesh = make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[0.7, 0.8, 0.85], up="y", alpha=1.0)
+        ground_mesh = make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[
+                                        0.7, 0.8, 0.85], up="y", alpha=1.0)
         ground_mesh.apply_translation([0.0, ground_height, 0.0])
         ground_mesh.export("ground_debug.obj")
 
@@ -151,7 +155,7 @@ def animate_scene(
     out_name,
     seq_name=None,
     accumulate=False,
-    render_views:List[str]=["src_cam", "front", "above", "side"],
+    render_views: List[str] = ["src_cam", "front", "above", "side"],
     render_bg=True,
     render_cam=True,
     render_ground=True,
@@ -213,7 +217,8 @@ def build_pyrender_scene(
     if len(render_views) < 1:
         return
 
-    assert all(view in ["src_cam", "front", "above", "side"] for view in render_views)
+    assert all(view in ["src_cam", "front", "above", "side"]
+               for view in render_views)
 
     scene = move_to(detach_all(scene), "cpu")
     src_cams = scene["cameras"]["src_cam"]
@@ -270,18 +275,22 @@ def build_pyrender_scene(
     # raise ValueError
     for t in times:
         if len(is_right[t]) > 1:
-            assert (is_right[t].cpu().numpy().tolist() == [0,1])
-            l_meshes = make_batch_mesh(verts[t][0][None], l_faces[t], colors[t][0][None])
-            r_meshes = make_batch_mesh(verts[t][1][None], r_faces[t], colors[t][1][None])
+            assert (is_right[t].cpu().numpy().tolist() == [0, 1])
+            l_meshes = make_batch_mesh(
+                verts[t][0][None], l_faces[t], colors[t][0][None])
+            r_meshes = make_batch_mesh(
+                verts[t][1][None], r_faces[t], colors[t][1][None])
             assert len(l_meshes) == 1
             assert len(r_meshes) == 1
             meshes = [l_meshes[0], r_meshes[0]]
         else:
             assert len(is_right[t]) == 1
             if is_right[t] == 0:
-                meshes = make_batch_mesh(verts[t][0][None], l_faces[t], colors[t][0][None])
+                meshes = make_batch_mesh(
+                    verts[t][0][None], l_faces[t], colors[t][0][None])
             elif is_right[t] == 1:
-                meshes = make_batch_mesh(verts[t][0][None], r_faces[t], colors[t][0][None])
+                meshes = make_batch_mesh(
+                    verts[t][0][None], r_faces[t], colors[t][0][None])
 
         if accumulate:
             vis.add_static_meshes(meshes)
@@ -311,7 +320,7 @@ def get_static_views(seq_name=None, bounds=None):
     return top_pose, side_pose, skip
 
 
-def make_video_grid_2x2(out_path, vid_paths, overwrite=False):
+def make_video_grid_2x2(out_path: str, vid_paths: List[str], overwrite: bool = False):
     if os.path.isfile(out_path) and not overwrite:
         print(f"{out_path} already exists, skipping.")
         return
@@ -322,51 +331,18 @@ def make_video_grid_2x2(out_path, vid_paths, overwrite=False):
 
     # resize each input by half and then tile
     # so the output video is the same resolution
-    # v1, v2, v3, v4 = vid_paths
-    # cmd = (
-    #     f"ffmpeg -i {v1} -i {v2} -i {v3} -i {v4} "
-    #     f"-filter_complex '[0:v]scale=iw/2:ih/2[v0];"
-    #     f"[1:v]scale=iw/2:ih/2[v1];"
-    #     f"[2:v]scale=iw/2:ih/2[v2];"
-    #     f"[3:v]scale=iw/2:ih/2[v3];"
-    #     f"[v0][v1][v2][v3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0[v]' "
-    #     f"-map '[v]' {out_path} -y"
-    # )
+    v1, v2, v3, v4 = vid_paths
+    cmd = (
+        f"ffmpeg -i {v1} -i {v2} -i {v3} -i {v4} "
+        f"-filter_complex '[0:v]scale=iw/2:ih/2[v0];"
+        f"[1:v]scale=iw/2:ih/2[v1];"
+        f"[2:v]scale=iw/2:ih/2[v2];"
+        f"[3:v]scale=iw/2:ih/2[v3];"
+        f"[v0][v1][v2][v3]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0[v]' "
+        f"-map '[v]' {out_path} -y"
+    )
 
-    # print(cmd)
-    # subprocess.call(cmd, shell=True, stdin=subprocess.PIPE)
-
-    # 读取四个视频
-    videos = [cv2.VideoCapture(v) for v in vid_paths]
-
-    # Check if videos are opened successfully
-    if any(not video.isOpened() for video in videos):
-        print("Error opening input videos.")
-        return
-
-    # Get video properties (assuming all videos have the same properties)
-    width = int(videos[0].get(cv2.CAP_PROP_FRAME_WIDTH) / 2)
-    height = int(videos[0].get(cv2.CAP_PROP_FRAME_HEIGHT) / 2)
-    fps = videos[0].get(cv2.CAP_PROP_FPS)
-
-    # Create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # You can choose a different codec if needed
-    out = cv2.VideoWriter(out_path, fourcc, fps, (width * 2, height * 2))
-
-    # Read and resize frames, then stack them
-    while True:
-        frames = [video.read()[1] for video in videos]
-        if any(frame is None for frame in frames):
-            break
-        else:
-            frames = [cv2.resize(frame, (width, height)) for frame in frames]
-        
-        stacked_frame = np.vstack([np.hstack(frames[:2]), np.hstack(frames[2:])])
-        out.write(stacked_frame)
-
-    # Release VideoCapture and VideoWriter objects
-    for video in videos:
-        video.release()
-    out.release()
+    print(cmd)
+    subprocess.call(cmd, shell=True, stdin=subprocess.PIPE)
 
     print(f"Video grid created: {out_path}")
