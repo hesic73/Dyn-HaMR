@@ -20,31 +20,7 @@ from .tools import (
     camera_marker_geometry,
     transform_pyrender,
 )
-
-
-def init_viewer(
-    img_size, intrins, vis_scale=1.0, bg_paths=None, fps=30,
-):
-    img_size = int(vis_scale * img_size[0]), int(vis_scale * img_size[1])
-    intrins = vis_scale * intrins
-
-    platform = os.environ.get("PYOPENGL_PLATFORM", "pyglet")
-    if platform == "pyglet":
-        vis = AnimationViewer(img_size, intrins=intrins, fps=fps)
-        print("VIS", vis)
-        return vis
-
-    if platform != "egl":
-        raise NotImplementedError
-
-    vis = OffscreenAnimation(img_size, intrins=intrins, fps=fps)
-    if bg_paths is not None:
-        bg_imgs = [
-            read_image(p, scale=vis_scale).astype(np.float32) / 255 for p in bg_paths
-        ]
-        vis.set_bg_seq(bg_imgs)
-    print("VIS", vis)
-    return vis
+from typing import Tuple, Optional, List
 
 
 class AnimationBase(object):
@@ -55,7 +31,7 @@ class AnimationBase(object):
     xyz = right forward up)
     """
 
-    def __init__(self, img_size, intrins=None):
+    def __init__(self, img_size: Tuple[int, int], intrins: Optional[np.ndarray] = None):
         self.scene = pyrender.Scene(
             ambient_light=[0.3, 0.3, 0.3], bg_color=[1.0, 1.0, 1.0, 0.0]
         )
@@ -67,7 +43,10 @@ class AnimationBase(object):
         # set the ground with Z up
         self.ground_pose = np.eye(4)
         ground = pyrender.Mesh.from_trimesh(
-            make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[0.7, 0.8, 0.85], up="y", alpha=1.0), smooth=False
+            make_checkerboard(
+                color0=[0.9, 0.95, 1.0], color1=[0.7, 0.8, 0.85], up="y", alpha=1.0
+            ),
+            smooth=False,
         )
         self.ground_node = self.scene.add(ground, name="ground", pose=self.ground_pose)
         self.cam_node = self.scene.add(self.camera, name="camera")
@@ -109,7 +88,7 @@ class AnimationBase(object):
     def anim_len(self):
         return len(self.anim_meshes)
 
-    def add_lighting(self, color=np.ones(3), intensity=1.0):
+    def add_lighting(self, color: np.ndarray = np.ones(3), intensity: float = 1.0):
         self.light_poses = get_light_poses()
         self.light_poses.append(np.eye(4))
         cam_pose = self.scene.get_pose(self.cam_node)
@@ -125,7 +104,7 @@ class AnimationBase(object):
             self.scene.add_node(node)
             self.light_nodes.append(node)
 
-    def add_mesh_frame(self, meshes, debug=False):
+    def add_mesh_frame(self, meshes: List[trimesh.Trimesh]):
         """
         :param meshes (list) trimesh meshes for this frame timestep
         """
@@ -140,7 +119,7 @@ class AnimationBase(object):
                 self.anim_nodes.append(self.scene.add(meshes[i], name=f"mesh_{i:03d}"))
             self.release_lock()
 
-    def add_static_meshes(self, meshes, smooth=True):
+    def add_static_meshes(self, meshes: List[trimesh.Trimesh], smooth: bool = True):
         """
         add all meshes to a single frame (timestep)
         """
@@ -161,7 +140,7 @@ class AnimationBase(object):
             )
         self.release_lock()
 
-    def set_camera_seq(self, poses):
+    def set_camera_seq(self, poses: np.ndarray):
         """
         :param poses (*, 4, 4)
         """
@@ -173,7 +152,7 @@ class AnimationBase(object):
         print(f"Adding camera sequence length {len(poses)}")
         self.anim_cameras = poses
 
-    def add_camera_markers(self, poses):
+    def add_camera_markers(self, poses: np.ndarray):
         """
         Add a single camera marker node that we move around when we animate
         """
@@ -187,7 +166,7 @@ class AnimationBase(object):
         poses = np.asarray(poses)
         self.cam_marker_poses = poses
 
-    def add_camera_markers_static(self, poses):
+    def add_camera_markers_static(self, poses: np.ndarray):
         """
         Add all camera markers as separate mesh nodes to render in one pass
         """
@@ -197,21 +176,21 @@ class AnimationBase(object):
         cam_meshes = [make_camera_marker(up="y", transform=pose) for pose in poses]
         self.add_static_meshes(cam_meshes, smooth=False)
 
-    def update_camera(self, cam_pose):
+    def update_camera(self, cam_pose: np.ndarray):
         self.acquire_lock()
         self.scene.set_pose(self.cam_node, pose=cam_pose)
         self.release_lock()
 
-    def set_ground(self, pose):
+    def set_ground(self, pose: np.ndarray):
         pose = transform_pyrender(pose)
         print("Setting ground pose to be", pose)
         self.ground_pose = np.asarray(pose)
         self.scene.set_pose(self.ground_node, pose=self.ground_pose)
 
-    def set_bg_seq(self, bg_imgs):
-        pass
+    def set_bg_seq(self, bg_imgs: List[np.ndarray]):
+        raise NotImplementedError
 
-    def set_mesh_visibility(self, vis):
+    def set_mesh_visibility(self, vis: bool):
         self.acquire_lock()
         for node in self.anim_nodes:
             node.mesh.is_visible = vis
@@ -256,7 +235,13 @@ class AnimationBase(object):
 
 
 class OffscreenAnimation(AnimationBase):
-    def __init__(self, img_size, intrins=None, fps=30, ext="mp4"):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        intrins: Optional[np.ndarray] = None,
+        fps: int = 30,
+        ext: str = "mp4",
+    ):
         super().__init__(img_size, intrins=intrins)
         self.add_lighting(0.9)
 
@@ -266,7 +251,7 @@ class OffscreenAnimation(AnimationBase):
 
         self.bg_seq = []
 
-    def set_bg_seq(self, bg_imgs):
+    def set_bg_seq(self, bg_imgs: List[np.ndarray]):
         assert isinstance(bg_imgs, list)
         print(f"setting length {len(bg_imgs)} bg sequence")
         self.bg_seq = bg_imgs
@@ -278,7 +263,12 @@ class OffscreenAnimation(AnimationBase):
         self.delete()
 
     def render(
-        self, render_bg=True, render_ground=True, render_cam=True, fac=1.0, **kwargs
+        self,
+        render_bg: bool = True,
+        render_ground: bool = True,
+        render_cam: bool = True,
+        fac: float = 1.0,
+        **kwargs,
     ):
         flags = RenderFlags.RGBA | RenderFlags.SHADOWS_DIRECTIONAL
         self.ground_node.mesh.is_visible = render_ground and (not render_bg)
@@ -300,7 +290,9 @@ class OffscreenAnimation(AnimationBase):
 
         return img
 
-    def render_mesh_layers(self, render_ground=True, render_cam=True, **kwargs):
+    def render_mesh_layers(
+        self, render_ground: bool = True, render_cam: bool = True, **kwargs
+    ):
         # render each mesh in its own layer
         flags = RenderFlags.RGBA | RenderFlags.SHADOWS_DIRECTIONAL
         render_cam = render_cam and self.cam_marker_node is not None
@@ -354,7 +346,13 @@ class OffscreenAnimation(AnimationBase):
             frames_layers.append(layers)
         return frames_layers
 
-    def animate(self, save_name, save_frames=False, render_layers=False, **kwargs):
+    def animate(
+        self,
+        save_name: str,
+        save_frames: bool = False,
+        render_layers: bool = False,
+        **kwargs,
+    ):
         if render_layers:
             frames_layers = self.render_frames_layers()
             os.makedirs(save_name, exist_ok=True)
@@ -376,7 +374,9 @@ class OffscreenAnimation(AnimationBase):
             save_path = f"{save_name}.{self.ext}"
             os.makedirs(save_name, exist_ok=True)
             for idx, i in enumerate(frames):
-                imageio.imwrite(f"{save_name}/" + f'{str(idx).zfill(6)}.jpg', i[:, :, :3])
+                imageio.imwrite(
+                    f"{save_name}/" + f"{str(idx).zfill(6)}.jpg", i[:, :, :3]
+                )
             imageio.mimwrite(save_path, frames, fps=self.fps)
             print("wrote video to", save_path)
             return save_path
@@ -396,7 +396,7 @@ class OffscreenAnimation(AnimationBase):
             frames.append(img)
         return frames
 
-    def render_layers(self, save_dir, composite=False, fac=0.4):
+    def render_layers(self, save_dir: str, composite: bool = False, fac: float = 0.4):
         os.makedirs(save_dir, exist_ok=True)
 
         # render all frames
@@ -416,7 +416,7 @@ class OffscreenAnimation(AnimationBase):
             imageio.imwrite(f"{save_dir}/composite.png", (255 * rgba).astype(np.uint8))
 
 
-def composite_layers(frames, bg_img, fac=0.4):
+def composite_layers(frames: List[np.ndarray], bg_img: np.ndarray, fac: float = 0.4):
     # composite front to back
     H, W = frames[0].shape[:2]
     comp = np.zeros((H, W, 3))
@@ -435,7 +435,13 @@ def composite_layers(frames, bg_img, fac=0.4):
 
 
 class AnimationViewer(AnimationBase):
-    def __init__(self, img_size, intrins=None, fps=30, num_repeats=1):
+    def __init__(
+        self,
+        img_size: Tuple[int, int],
+        intrins: Optional[np.ndarray] = None,
+        fps: int = 30,
+        num_repeats: int = 1,
+    ):
         super().__init__(img_size, intrins=intrins)
 
         self.fps = fps
@@ -482,7 +488,7 @@ class AnimationViewer(AnimationBase):
     def close(self):
         self.viewer.close_external()
 
-    def animate(self, save_name=None, **kwargs):
+    def animate(self, save_name: Optional[str] = None, **kwargs):
         print("===================")
         print(f"PLAYING ANIMATION {self.num_repeats} TIMES")
         print("VIEWER CONTROLS:")
@@ -609,3 +615,30 @@ def get_raymond_light_poses(up="z"):
         matrix[:3, :3] = np.c_[x, y, z]
         poses.append(matrix)
     return poses
+
+
+def init_viewer(
+    img_size: Tuple[int, int],
+    intrins: np.ndarray,
+    vis_scale: float = 1.0,
+    bg_paths: Optional[List[str]] = None,
+    fps: int = 30,
+) -> AnimationBase:
+    img_size = int(vis_scale * img_size[0]), int(vis_scale * img_size[1])
+    intrins = vis_scale * intrins
+
+    platform = os.environ.get("PYOPENGL_PLATFORM", "pyglet")
+    if platform == "pyglet":
+        vis = AnimationViewer(img_size, intrins=intrins, fps=fps)
+        return vis
+    elif platform == "egl":
+        vis = OffscreenAnimation(img_size, intrins=intrins, fps=fps)
+        if bg_paths is not None:
+            bg_imgs = [
+                read_image(p, scale=vis_scale).astype(np.float32) / 255
+                for p in bg_paths
+            ]
+            vis.set_bg_seq(bg_imgs)
+        return vis
+    else:
+        raise NotImplementedError(f"Platform {platform} not supported")

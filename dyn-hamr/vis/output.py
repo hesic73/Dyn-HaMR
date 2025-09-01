@@ -296,14 +296,14 @@ def build_pyrender_scene(
         if accumulate:
             vis.add_static_meshes(meshes)
         else:
-            vis.add_mesh_frame(meshes, debug=debug)
+            vis.add_mesh_frame(meshes)
 
     # add camera markers
-    # if render_cam:
-    #     if accumulate:
-    #         vis.add_camera_markers_static(src_cams[::skip])
-    #     else:
-    #         vis.add_camera_markers(src_cams[::skip])
+    if render_cam:
+        if accumulate:
+            vis.add_camera_markers_static(src_cams[::skip])
+        else:
+            vis.add_camera_markers(src_cams[::skip])
 
     return scene
 
