@@ -1043,7 +1043,7 @@ def smooth_global_rot_matrix(pred_rots, OE_filter):
 def create_OneEuroFilter(smooth_coeff):
     return {'poses': OneEuroFilter(smooth_coeff, 0.7), 'cam': OneEuroFilter(1.6, 0.7), 'betas': OneEuroFilter(0.6, 0.7), 'global_orient': OneEuroFilter(smooth_coeff, 0.7)}
 
-def smooth_results(global_orientation, body_pose, body_shape, is_right, cam=None):
+def smooth_results(global_orientation, body_pose, is_right, cam=None):
     filters = {}
     filters[0] = create_OneEuroFilter(smooth_coeff=1)
     filters[1] = create_OneEuroFilter(smooth_coeff=1)
@@ -1058,7 +1058,7 @@ def smooth_results(global_orientation, body_pose, body_shape, is_right, cam=None
             if cam is not None:
                 cam[idx, time] = filters[handedness]['cam'].process(cam[idx, time])
 
-    return global_orientation, body_pose, body_shape, cam
+    return global_orientation, body_pose, cam
 
 '''
 learn from the minimal hand https://github.com/CalciferZh/minimal-hand

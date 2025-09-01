@@ -30,8 +30,8 @@ def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
     with torch.no_grad():
         if temporal_smooth:
             print('running temporal smooth')
-            res["root_orient"], res["pose_body"], res['betas'], res["trans"] = smooth_results(
-                res["root_orient"], res["pose_body"], res['betas'], res["is_right"], res["trans"])
+            res["root_orient"], res["pose_body"], res["trans"] = smooth_results(
+                res["root_orient"], res["pose_body"], res["is_right"], res["trans"])
 
         world_smpl = run_mano(
             body_model,

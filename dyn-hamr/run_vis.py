@@ -1,5 +1,6 @@
 import os
 import glob
+from pathlib import Path
 
 import imageio
 import numpy as np
@@ -109,7 +110,7 @@ def run_vis(
     dataset,
     out_dir,
     dev_id,
-    phases=["motion_chunks"],
+    phases,
     render_views=["src_cam", "above", "side"],
     make_grid=False,
     overwrite=False,
@@ -291,11 +292,8 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
 
 
 def visualize_log(log_dir, dev_id, phases, save_dir=None, **kwargs):
-    print(log_dir)
     cfg = load_config_from_log(log_dir)
-    print(cfg)
-    print(cfg.data)
-    print(cfg.data.sources)
+    cfg.data.root=str(Path(__file__).parent/"_video_root")
 
     # make sure we get all necessary inputs
     cfg.data.sources = expand_source_paths(cfg.data.sources)
@@ -369,8 +367,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_root", required=True)
-    parser.add_argument("--save_root", default='./')
-    parser.add_argument("--phases", nargs="*", default=["motion_chunks"])
+    parser.add_argument("--save_root", default='../outputs/vis_save_root')
+    parser.add_argument("--phases", nargs="*", default=["hamer"])
     parser.add_argument("--gpus", nargs="*", default=[0])
     parser.add_argument(
         "-rv",
