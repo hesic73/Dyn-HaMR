@@ -15,7 +15,9 @@ from util.tensor import detach_all, to_torch, move_to
 from .fig_specs import get_seq_figure_skip, get_seq_static_lookat_points
 from .tools import mesh_to_geometry, smooth_results
 
-from typing import List
+from vis.viewer import make_checkerboard, AnimationBase
+
+from typing import List, Dict, Any, Tuple, Optional
 
 
 def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
@@ -105,7 +107,6 @@ def build_scene_dict(
 
         # Save ground mesh for Blender debugging
         import trimesh
-        from vis.viewer import make_checkerboard
         ground_mesh = make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[
                                         0.7, 0.8, 0.85], up="y", alpha=1.0)
         ground_mesh.apply_translation([0.0, ground_height, 0.0])
@@ -150,7 +151,7 @@ def build_scene_dict(
 
 
 def animate_scene(
-    vis,
+    vis:AnimationBase,
     scene,
     out_name,
     seq_name=None,
@@ -200,7 +201,7 @@ def animate_scene(
 
 
 def build_pyrender_scene(
-    vis,
+    vis:AnimationBase,
     scene,
     seq_name,
     render_views=["src_cam", "front", "above", "side"],
@@ -227,7 +228,7 @@ def build_pyrender_scene(
     print(f"{T} mesh frames for {seq_name}, {len(verts)}")
 
     # set camera views
-    if not "cameras" in scene:
+    if "cameras" not in scene:
         scene["cameras"] = {}
 
     # remove default views from source camera perspective if desired
