@@ -87,17 +87,16 @@ def build_scene_dict(
     # Create ground plane based on hand mesh height
     verts = scene_dict["geometry"][0]  # Get vertices from geometry
     if len(verts) > 0:
-        # Find minimum height across all frames and vertices
-        min_height = float('inf')
+        max_height = float('-inf')
         for frame_verts in verts:
             if len(frame_verts) > 0:
                 # y-coordinate is height
-                frame_min = frame_verts[..., 1].min().item()
-                min_height = min(min_height, frame_min)
+                frame_max = frame_verts[..., 1].max().item()
+                max_height = max(max_height, frame_max)
 
-        # Set ground plane further below minimum height
-        ground_offset = -0.5  # 20cm below minimum height
-        ground_height = min_height - ground_offset
+        # NOTE (hsc): In camera space, "up" is -y, so the max height is the lowest point.
+        # This is my understanding, but I am not sure. The codebase is hard to understand.
+        ground_height = max_height
 
         # Create ground plane transform
         R = torch.eye(3)  # Identity rotation (flat ground)
