@@ -4,21 +4,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
 from body_model import OP_IGNORE_JOINTS
 from geometry.mesh import save_mesh_scenes, vertices_to_trimesh
 from util.logger import Logger, log_cur_stats
 from util.tensor import move_to, detach_all
 from vis.output import prep_result_vis, animate_scene
+from vis.viewer import AnimationBase
 
 from .losses import RootLoss, SMPLLoss  # , MotionLoss
-from .output import save_camera_json
-import time
+
+
 
 from loguru import logger
+
+from typing import Dict, Any, List, Tuple, Optional
 
 LINE_SEARCH = "strong_wolfe"
 LIGHT_BLUE = (0.65098039,  0.74117647,  0.85882353)
@@ -214,7 +214,7 @@ class StageOptimizer(object):
     #                 tmesh = vertices_to_trimesh(verts[t][0].detach().cpu().numpy(), r_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=1)
     #                 tmesh.export(os.path.join(scene_dir, f'{str(t).zfill(6)}_1.obj'))
 
-    def vis_result(self, res_dir, obs_data, vis=None, num_steps=-1):
+    def vis_result(self, res_dir, obs_data, vis:Optional[AnimationBase]=None, num_steps=-1):
         if vis is None or self.vis_every < 0:
             return
 
@@ -278,7 +278,7 @@ class StageOptimizer(object):
             plt.boxplot(loss_vals, labels=times, showfliers=False)
             plt.savefig(f"{res_dir}/{loss_name}.png")
 
-    def run(self, obs_data, num_iters, out_dir, vis=None, writer=None):
+    def run(self, obs_data, num_iters, out_dir, vis:Optional[AnimationBase]=None, writer=None):
         self.cur_step = 0
         self.loss.cur_step = 0
         res_dir = os.path.join(out_dir, self.name)

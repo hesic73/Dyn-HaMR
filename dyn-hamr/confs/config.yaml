@@ -6,7 +6,7 @@ defaults:
 model:
   use_init: True
   opt_cams: False #True
-  opt_scale: True
+  opt_scale: False # NOTE (hsc): Since we can use arkit to get relatively accurate camera intrinsics/extrinsics, we don't need to optimize scale
   async_tracks: True
 
 overwrite: False

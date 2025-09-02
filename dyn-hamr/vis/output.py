@@ -15,7 +15,9 @@ from util.tensor import detach_all, to_torch, move_to
 from .fig_specs import get_seq_figure_skip, get_seq_static_lookat_points
 from .tools import mesh_to_geometry, smooth_results
 
-from typing import List
+from vis.viewer import make_checkerboard, AnimationBase
+
+from typing import List, Dict, Any, Tuple, Optional
 
 
 def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
@@ -85,17 +87,16 @@ def build_scene_dict(
     # Create ground plane based on hand mesh height
     verts = scene_dict["geometry"][0]  # Get vertices from geometry
     if len(verts) > 0:
-        # Find minimum height across all frames and vertices
-        min_height = float('inf')
+        max_height = float('-inf')
         for frame_verts in verts:
             if len(frame_verts) > 0:
                 # y-coordinate is height
-                frame_min = frame_verts[..., 1].min().item()
-                min_height = min(min_height, frame_min)
+                frame_max = frame_verts[..., 1].max().item()
+                max_height = max(max_height, frame_max)
 
-        # Set ground plane further below minimum height
-        ground_offset = -0.5  # 20cm below minimum height
-        ground_height = min_height - ground_offset
+        # NOTE (hsc): In camera space, "up" is -y, so the max height is the lowest point.
+        # This is my understanding, but I am not sure. The codebase is hard to understand.
+        ground_height = max_height
 
         # Create ground plane transform
         R = torch.eye(3)  # Identity rotation (flat ground)
@@ -105,7 +106,6 @@ def build_scene_dict(
 
         # Save ground mesh for Blender debugging
         import trimesh
-        from vis.viewer import make_checkerboard
         ground_mesh = make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[
                                         0.7, 0.8, 0.85], up="y", alpha=1.0)
         ground_mesh.apply_translation([0.0, ground_height, 0.0])
@@ -150,7 +150,7 @@ def build_scene_dict(
 
 
 def animate_scene(
-    vis,
+    vis:AnimationBase,
     scene,
     out_name,
     seq_name=None,
@@ -200,7 +200,7 @@ def animate_scene(
 
 
 def build_pyrender_scene(
-    vis,
+    vis:AnimationBase,
     scene,
     seq_name,
     render_views=["src_cam", "front", "above", "side"],
@@ -227,7 +227,7 @@ def build_pyrender_scene(
     print(f"{T} mesh frames for {seq_name}, {len(verts)}")
 
     # set camera views
-    if not "cameras" in scene:
+    if "cameras" not in scene:
         scene["cameras"] = {}
 
     # remove default views from source camera perspective if desired
@@ -295,14 +295,14 @@ def build_pyrender_scene(
         if accumulate:
             vis.add_static_meshes(meshes)
         else:
-            vis.add_mesh_frame(meshes, debug=debug)
+            vis.add_mesh_frame(meshes)
 
     # add camera markers
-    # if render_cam:
-    #     if accumulate:
-    #         vis.add_camera_markers_static(src_cams[::skip])
-    #     else:
-    #         vis.add_camera_markers(src_cams[::skip])
+    if render_cam:
+        if accumulate:
+            vis.add_camera_markers_static(src_cams[::skip])
+        else:
+            vis.add_camera_markers(src_cams[::skip])
 
     return scene
 

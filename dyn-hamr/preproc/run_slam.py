@@ -21,6 +21,8 @@ from lietorch import SE3
 from droid_slam.droid import Droid
 import droid_backends
 
+from loguru import logger
+
 from typing import List
 
 
@@ -301,9 +303,18 @@ def main(args):
             print(glob.glob(f"{args.map_dir}/*.npz"), "already exist, skipping")
             return
 
-    intrins_all = load_intrins(
-        args.intrins_path, img_paths, start=args.start, end=args.end
-    )
+    if args.intrins_path is not None:
+        intrins_all = load_intrins(
+            args.intrins_path, img_paths, start=args.start, end=args.end
+        )
+        logger.info(f"Loaded intrinsics from {args.intrins_path}")
+    else:
+        # Use default intrinsics
+        N = len(img_paths)
+        H, W, F = get_hwf(img_paths[0])
+        intrins_all = torch.tensor([F, F, W / 2, H / 2, W, H])[None].repeat(N, 1)
+        logger.warning(f"Using default intrinsics for {N} images")
+
     print("intrins shape", intrins_all.shape, "num images", len(img_paths))
 
     for t, image, intrinsics in tqdm(image_stream(img_paths, intrins_all)):
