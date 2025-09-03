@@ -17,7 +17,6 @@ from .tools import mesh_to_geometry, smooth_results
 
 from vis.viewer import make_checkerboard, AnimationBase
 
-from optim.base_scene import BaseSceneModel
 
 from loguru import logger
 
@@ -154,7 +153,7 @@ def build_scene_dict(
 
 def animate_scene(
     vis: AnimationBase,
-    scene: BaseSceneModel,
+    scene: Dict[str, Any],
     out_name: str,
     seq_name: Optional[str] = None,
     accumulate: bool = False,
@@ -204,7 +203,7 @@ def animate_scene(
 
 def build_pyrender_scene(
     vis: AnimationBase,
-    scene: BaseSceneModel,
+    scene: Dict[str, Any],
     seq_name: Optional[str] = None,
     render_views: List[str] = ["src_cam", "front", "above", "side"],
     render_cam: bool = True,
