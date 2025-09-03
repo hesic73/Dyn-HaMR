@@ -17,6 +17,8 @@ from util.tensor import move_to, detach_all
 from .params import CameraParams
 # import mano
 
+from loguru import logger
+
 J_HAND = len(MANO_JOINTS) - 1  # no root
 
 
@@ -36,18 +38,17 @@ class BaseSceneModel(nn.Module):
 
     def __init__(
         self,
-        batch_size,
-        seq_len,
+        batch_size: int,
+        seq_len: int,
         body_model,
         pose_prior,
         # fit_gender="neutral",
-        use_init=False,
-        opt_cams=False,
-        opt_scale=True,
+        use_init: bool=False,
+        opt_cams: bool=False,
+        opt_scale: bool=True,
         **kwargs,
     ):
         super().__init__()
-        B, T = batch_size, seq_len
         self.batch_size = batch_size
         self.seq_len = seq_len
 

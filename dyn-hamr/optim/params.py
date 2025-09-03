@@ -10,53 +10,56 @@ from geometry.rotation import batch_rodrigues
 from util.logger import Logger
 from util.tensor import detach_all
 
+from typing import Dict, Any, Optional, List, Tuple
+
 # J_BODY = len(MANO_JOINTS) - 1  # no root
 # assert J_BODY == 15
 
+
 class Params(nn.Module):
-    def __init__(self, batch_size):
+    def __init__(self, batch_size: int):
         super().__init__()
         self.batch_size = batch_size
         self.param_names = set()
 
-    def set_param(self, name, val, requires_grad=False):
-        print("SETTING PARAM", name, val.shape)
+    def set_param(self, name: str, val: torch.Tensor, requires_grad: bool = False):
         with torch.no_grad():
             setattr(
-                self, name, nn.Parameter(val.contiguous(), requires_grad=requires_grad)
+                self, name, nn.Parameter(
+                    val.contiguous(), requires_grad=requires_grad)
             )
         self.param_names.add(name)
 
-    def get_param(self, name):
+    def get_param(self, name: str) -> torch.Tensor:
         if name not in self.param_names:
             raise ValueError(f"{name} not stored as opt param")
         return getattr(self, name)
 
-    def load_dict(self, param_dict):
+    def load_dict(self, param_dict: Dict[str, torch.Tensor]):
         for name, val in param_dict.items():
             self.set_param(name, val, requires_grad=False)
 
-    def get_dict(self):
+    def get_dict(self) -> Dict[str, torch.Tensor]:
         return {name: self.get_param_item(name) for name in self.param_names}
 
-    def get_vars(self, names=None):
+    def get_vars(self, names: Optional[List[str]] = None) -> Dict[str, torch.Tensor]:
         if names is None:
             names = self.param_names
         return {name: self.get_param(name) for name in names}
 
-    def get_param_item(self, name):
+    def get_param_item(self, name: str) -> torch.Tensor:
         with torch.no_grad():
             param = self.get_param(name)
             return param.detach()
 
-    def _set_param_grad(self, name, val: bool):
+    def _set_param_grad(self, name: str, requires_grad: bool):
         if name not in self.param_names:
             raise ValueError(f"{name} not stored as param")
         param = getattr(self, name)
         assert isinstance(param, torch.Tensor)
-        param.requires_grad = val
+        param.requires_grad = requires_grad
 
-    def set_require_grads(self, names):
+    def set_require_grads(self, names: List[str]):
         """
         set parameters in names to True, set all others to False
         """
@@ -68,7 +71,8 @@ class Params(nn.Module):
 
         Logger.log("Set parameter grads:")
         Logger.log(
-            {name: getattr(self, name).requires_grad for name in self.param_names}
+            {name: getattr(
+                self, name).requires_grad for name in self.param_names}
         )
 
 
@@ -78,7 +82,7 @@ class CameraParams(Params):
     """
 
     def set_cameras(
-        self, cam_data, opt_scale=True, opt_cams=False, opt_focal=False, **kwargs
+        self, cam_data: Dict[str, torch.Tensor], opt_scale: bool, opt_cams: bool, opt_focal: bool, **kwargs
     ):
         self.opt_scale = opt_scale
         self.opt_cams = opt_cams
@@ -127,10 +131,10 @@ class CameraParams(Params):
             self.set_param("delta_cam_t", init_delta_t)
 
     @property
-    def intrins(self):  # (4,)
+    def intrins(self) -> torch.Tensor:  # (4,)
         return torch.cat([self.cam_f[0], self.cam_center[0]], dim=-1).detach().cpu()
 
-    def get_extrinsics(self):
+    def get_extrinsics(self) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         returns (T, 3, 3), (T, 3)
         """
@@ -145,18 +149,18 @@ class CameraParams(Params):
             cam_t = cam_t + self.delta_cam_t
         return cam_R, cam_t * self.world_scale
 
-    def get_intrinsics(self):
+    def get_intrinsics(self) -> torch.Tensor:
         """
         returns (T, 4)
         """
         return torch.cat([self.cam_f, self.cam_center], axis=-1)
 
-    def get_cameras(self, idcs=None):
+    def get_cameras(self, idcs: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         returns cam_R (B, T, 3, 3) cam_t (B, T, 3), cam_f (T, 2), cam_center (T, 2)
         """
         if idcs is None:
-            idcs = np.arange(self._cam_R.shape[0])
+            idcs = torch.arange(self._cam_R.shape[0])
 
         # print('idcs:', idcs, self._cam_R.shape[0], self._cam_R.shape)
         cam_R, cam_t = self.get_extrinsics()

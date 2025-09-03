@@ -17,13 +17,15 @@ from geometry.rotation import rotation_matrix_to_angle_axis
 from geometry import camera as cam_util
 from optim.bio_loss import BMCLoss
 from util.logger import Logger
-from typing import List, Tuple, NewType
+from typing import List, Tuple, NewType, Dict, Any
 
 Tensor = NewType('Tensor', torch.Tensor)
 
 CONTACT_HEIGHT_THRESH = 0.08
-openpose_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+openpose_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 gt_indices = openpose_indices
+
 
 def solid_angles(
     points: Tensor,
@@ -84,6 +86,7 @@ def solid_angles(
 
     return 2 * solid_angle
 
+
 def winding_numbers(
     points: Tensor,
     triangles: Tensor,
@@ -118,8 +121,9 @@ def winding_numbers(
     return 1 / (4 * math.pi) * solid_angles(
         points, triangles, thresh=thresh).sum(dim=-1)
 
+
 def pcl_pcl_pairwise_distance(
-    x: torch.Tensor, 
+    x: torch.Tensor,
     y: torch.Tensor,
     use_cuda: bool = True,
     squared: bool = False
@@ -127,7 +131,7 @@ def pcl_pcl_pairwise_distance(
     """
     Calculate the pairse distance between two point clouds.
     """
-    
+
     bs, num_points_x, points_dim = x.size()
     _, num_points_y, _ = y.size()
 
@@ -149,10 +153,11 @@ def pcl_pcl_pairwise_distance(
     P = rx.transpose(2, 1) + ry - 2 * zz
 
     if not squared:
-        P = torch.clamp(P, min=0.0) # make sure we dont get nans
+        P = torch.clamp(P, min=0.0)  # make sure we dont get nans
         P = torch.sqrt(P)
-    
+
     return P
+
 
 def get_keypoints_rectangle(keypoints: np.array, threshold: float) -> Tuple[float, float, float]:
     """
@@ -167,16 +172,17 @@ def get_keypoints_rectangle(keypoints: np.array, threshold: float) -> Tuple[floa
     valid_ind = keypoints[:, -1] > threshold
     if valid_ind.sum() > 0:
         valid_keypoints = keypoints[valid_ind][:, :-1]
-        max_x = valid_keypoints[:,0].max()
-        max_y = valid_keypoints[:,1].max()
-        min_x = valid_keypoints[:,0].min()
-        min_y = valid_keypoints[:,1].min()
+        max_x = valid_keypoints[:, 0].max()
+        max_y = valid_keypoints[:, 1].max()
+        min_x = valid_keypoints[:, 0].min()
+        min_y = valid_keypoints[:, 1].min()
         width = max_x - min_x
         height = max_y - min_y
         area = width * height
         return width, height, area
     else:
-        return 0,0,0
+        return 0, 0, 0
+
 
 def render_keypoints(img: np.array,
                      keypoints: np.array,
@@ -210,45 +216,56 @@ def render_keypoints(img: np.array,
     numberColors = len(colors)
     thresholdRectangle = 0.1
 
-    person_width, person_height, person_area = get_keypoints_rectangle(keypoints, thresholdRectangle)
+    person_width, person_height, person_area = get_keypoints_rectangle(
+        keypoints, thresholdRectangle)
     if person_area > 0:
         ratioAreas = min(1, max(person_width / width, person_height / height))
-        thicknessRatio = np.maximum(np.round(math.sqrt(area) * thickness_circle_ratio * ratioAreas), 2)
-        thicknessCircle = np.maximum(1, thicknessRatio if ratioAreas > 0.05 else -np.ones_like(thicknessRatio))
-        thicknessLine = np.maximum(1, np.round(thicknessRatio * thickness_line_ratio_wrt_circle))
+        thicknessRatio = np.maximum(
+            np.round(math.sqrt(area) * thickness_circle_ratio * ratioAreas), 2)
+        thicknessCircle = np.maximum(
+            1, thicknessRatio if ratioAreas > 0.05 else -np.ones_like(thicknessRatio))
+        thicknessLine = np.maximum(1, np.round(
+            thicknessRatio * thickness_line_ratio_wrt_circle))
         radius = thicknessRatio / 2
 
         img = np.ascontiguousarray(img.copy())
         for i, pair in enumerate(pairs):
             index1, index2 = pair
             if keypoints[index1, -1] > threshold and keypoints[index2, -1] > threshold:
-                thicknessLineScaled = int(round(min(thicknessLine[index1], thicknessLine[index2]) * pose_scales[0]))
+                thicknessLineScaled = int(
+                    round(min(thicknessLine[index1], thicknessLine[index2]) * pose_scales[0]))
                 colorIndex = index2
                 color = colors[colorIndex % numberColors]
                 keypoint1 = keypoints[index1, :-1].astype(np.int32)
                 keypoint2 = keypoints[index2, :-1].astype(np.int32)
-                cv2.line(img, tuple(keypoint1.tolist()), tuple(keypoint2.tolist()), tuple(color.tolist()), thicknessLineScaled, lineType, shift)
+                cv2.line(img, tuple(keypoint1.tolist()), tuple(keypoint2.tolist()), tuple(
+                    color.tolist()), thicknessLineScaled, lineType, shift)
         for part in range(len(keypoints)):
             faceIndex = part
             if keypoints[faceIndex, -1] > threshold:
                 radiusScaled = int(round(radius[faceIndex] * pose_scales[0]))
-                thicknessCircleScaled = int(round(thicknessCircle[faceIndex] * pose_scales[0]))
+                thicknessCircleScaled = int(
+                    round(thicknessCircle[faceIndex] * pose_scales[0]))
                 colorIndex = part
                 color = colors[colorIndex % numberColors]
                 center = keypoints[faceIndex, :-1].astype(np.int32)
-                cv2.circle(img, tuple(center.tolist()), radiusScaled, tuple(color.tolist()), thicknessCircleScaled, lineType, shift)
+                cv2.circle(img, tuple(center.tolist()), radiusScaled, tuple(
+                    color.tolist()), thicknessCircleScaled, lineType, shift)
     return img
+
 
 def render_hand_keypoints(img, right_hand_keypoints, threshold=0.1, use_confidence=False, map_fn=lambda x: np.ones_like(x), alpha=1.0):
     if use_confidence and map_fn is not None:
-        #thicknessCircleRatioLeft = 1./50 * map_fn(left_hand_keypoints[:, -1])
+        # thicknessCircleRatioLeft = 1./50 * map_fn(left_hand_keypoints[:, -1])
         thicknessCircleRatioRight = 1./50 * map_fn(right_hand_keypoints[:, -1])
     else:
-        #thicknessCircleRatioLeft = 1./50 * np.ones(left_hand_keypoints.shape[0])
-        thicknessCircleRatioRight = 1./50 * np.ones(right_hand_keypoints.shape[0])
+        # thicknessCircleRatioLeft = 1./50 * np.ones(left_hand_keypoints.shape[0])
+        thicknessCircleRatioRight = 1./50 * \
+            np.ones(right_hand_keypoints.shape[0])
     thicknessLineRatioWRTCircle = 0.75
-    pairs = [0,1,  1,2,  2,3,  3,4,  0,5,  5,6,  6,7,  7,8,  0,9,  9,10,  10,11,  11,12,  0,13,  13,14,  14,15,  15,16,  0,17,  17,18,  18,19,  19,20]
-    pairs = np.array(pairs).reshape(-1,2)
+    pairs = [0, 1,  1, 2,  2, 3,  3, 4,  0, 5,  5, 6,  6, 7,  7, 8,  0, 9,  9, 10,  10,
+             11,  11, 12,  0, 13,  13, 14,  14, 15,  15, 16,  0, 17,  17, 18,  18, 19,  19, 20]
+    pairs = np.array(pairs).reshape(-1, 2)
 
     colors = [100.,  100.,  100.,
               100.,    0.,    0.,
@@ -259,25 +276,27 @@ def render_hand_keypoints(img, right_hand_keypoints, threshold=0.1, use_confiden
               150.,  150.,    0.,
               200.,  200.,    0.,
               255.,  255.,    0.,
-                0.,  100.,   50.,
-                0.,  150.,   75.,
-                0.,  200.,  100.,
-                0.,  255.,  125.,
-                0.,   50.,  100.,
-                0.,   75.,  150.,
-                0.,  100.,  200.,
-                0.,  125.,  255.,
+              0.,  100.,   50.,
+              0.,  150.,   75.,
+              0.,  200.,  100.,
+              0.,  255.,  125.,
+              0.,   50.,  100.,
+              0.,   75.,  150.,
+              0.,  100.,  200.,
+              0.,  125.,  255.,
               100.,    0.,  100.,
               150.,    0.,  150.,
               200.,    0.,  200.,
               255.,    0.,  255.]
-    colors = np.array(colors).reshape(-1,3)
-    #colors = np.zeros_like(colors)
+    colors = np.array(colors).reshape(-1, 3)
+    # colors = np.zeros_like(colors)
     poseScales = [1]
-    #img = render_keypoints(img, left_hand_keypoints, pairs, colors, thicknessCircleRatioLeft, thicknessLineRatioWRTCircle, poseScales, threshold, alpha=alpha)
-    img = render_keypoints(img, right_hand_keypoints, pairs, colors, thicknessCircleRatioRight, thicknessLineRatioWRTCircle, poseScales, threshold, alpha=alpha)
-    #img = render_keypoints(img, right_hand_keypoints, pairs, colors, thickness_circle_ratio, thickness_line_ratio_wrt_circle, pose_scales, 0.1)
+    # img = render_keypoints(img, left_hand_keypoints, pairs, colors, thicknessCircleRatioLeft, thicknessLineRatioWRTCircle, poseScales, threshold, alpha=alpha)
+    img = render_keypoints(img, right_hand_keypoints, pairs, colors, thicknessCircleRatioRight,
+                           thicknessLineRatioWRTCircle, poseScales, threshold, alpha=alpha)
+    # img = render_keypoints(img, right_hand_keypoints, pairs, colors, thickness_circle_ratio, thickness_line_ratio_wrt_circle, pose_scales, 0.1)
     return img
+
 
 def render_body_keypoints(img: np.array,
                           body_keypoints: np.array) -> np.array:
@@ -293,36 +312,38 @@ def render_body_keypoints(img: np.array,
     thickness_circle_ratio = 1./75. * np.ones(body_keypoints.shape[0])
     thickness_line_ratio_wrt_circle = 0.75
     pairs = []
-    pairs = [1,8,1,2,1,5,2,3,3,4,5,6,6,7,8,9,9,10,10,11,8,12,12,13,13,14,1,0,0,15,15,17,0,16,16,18,14,19,19,20,14,21,11,22,22,23,11,24]
-    pairs = np.array(pairs).reshape(-1,2)
+    pairs = [1, 8, 1, 2, 1, 5, 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 9, 10, 10, 11, 8, 12, 12, 13, 13,
+             14, 1, 0, 0, 15, 15, 17, 0, 16, 16, 18, 14, 19, 19, 20, 14, 21, 11, 22, 22, 23, 11, 24]
+    pairs = np.array(pairs).reshape(-1, 2)
     colors = [255.,     0.,     85.,
               255.,     0.,     0.,
               255.,    85.,     0.,
               255.,   170.,     0.,
               255.,   255.,     0.,
               170.,   255.,     0.,
-               85.,   255.,     0.,
-                0.,   255.,     0.,
+              85.,   255.,     0.,
+              0.,   255.,     0.,
               255.,     0.,     0.,
-                0.,   255.,    85.,
-                0.,   255.,   170.,
-                0.,   255.,   255.,
-                0.,   170.,   255.,
-                0.,    85.,   255.,
-                0.,     0.,   255.,
+              0.,   255.,    85.,
+              0.,   255.,   170.,
+              0.,   255.,   255.,
+              0.,   170.,   255.,
+              0.,    85.,   255.,
+              0.,     0.,   255.,
               255.,     0.,   170.,
               170.,     0.,   255.,
               255.,     0.,   255.,
-               85.,     0.,   255.,
-                0.,     0.,   255.,
-                0.,     0.,   255.,
-                0.,     0.,   255.,
-                0.,   255.,   255.,
-                0.,   255.,   255.,
-                0.,   255.,   255.]
-    colors = np.array(colors).reshape(-1,3)
+              85.,     0.,   255.,
+              0.,     0.,   255.,
+              0.,     0.,   255.,
+              0.,     0.,   255.,
+              0.,   255.,   255.,
+              0.,   255.,   255.,
+              0.,   255.,   255.]
+    colors = np.array(colors).reshape(-1, 3)
     pose_scales = [1]
     return render_keypoints(img, body_keypoints, pairs, colors, thickness_circle_ratio, thickness_line_ratio_wrt_circle, pose_scales, 0.1)
+
 
 def render_openpose(img: np.array,
                     hand_keypoints: np.array) -> np.array:
@@ -334,13 +355,14 @@ def render_openpose(img: np.array,
     Returns:
         (np.array): Image of shape (H, W, 3) with keypoints drawn on top of the original image. 
     """
-    #img = render_body_keypoints(img, body_keypoints)
+    # img = render_body_keypoints(img, body_keypoints)
     img = render_hand_keypoints(img, hand_keypoints)
     return img
 ###################################################
 
+
 class StageLoss(nn.Module):
-    def __init__(self, loss_weights, **kwargs):
+    def __init__(self, loss_weights: Dict[str, float], **kwargs: Any):
         super().__init__()
         self.cur_optim_step = 0
         self.set_loss_weights(loss_weights)
@@ -350,7 +372,7 @@ class StageLoss(nn.Module):
     def setup_losses(self, *args, **kwargs):
         raise NotImplementedError
 
-    def set_loss_weights(self, loss_weights):
+    def set_loss_weights(self, loss_weights: Dict[str, float]):
         self.loss_weights = loss_weights
         Logger.log("Stage loss weights set to:")
         Logger.log(self.loss_weights)
@@ -359,7 +381,7 @@ class StageLoss(nn.Module):
 class RootLoss(StageLoss):
     def setup_losses(
         self,
-        loss_weights,
+        loss_weights: Dict[str, float],
         ignore_op_joints=None,
         joints2d_sigma=100,
         use_chamfer=False,
@@ -368,7 +390,8 @@ class RootLoss(StageLoss):
         faces=None
     ):
         self.joints2d_loss = Joints2DLoss(ignore_op_joints, joints2d_sigma)
-        self.points3d_loss = Points3DLoss(use_chamfer, robust_loss, robust_tuning_const)
+        self.points3d_loss = Points3DLoss(
+            use_chamfer, robust_loss, robust_tuning_const)
         self.inter_penetration_loss = GeneralContactLoss(faces)
         self.bio_loss = BMCLoss(lambda_bl=1, lambda_rb=1, lambda_a=1)
 
@@ -495,14 +518,17 @@ def camera_smoothness_loss(R1, t1, R2, t2):
     :param R1, t1 (N, 3, 3), (N, 3)
     :param R2, t2 (N, 3, 3), (N, 3)
     """
-    R12, t12 = cam_util.compose_cameras(R2, t2, *cam_util.invert_camera(R1, t1))
+    R12, t12 = cam_util.compose_cameras(
+        R2, t2, *cam_util.invert_camera(R1, t1))
     aa12 = rotation_matrix_to_angle_axis(R12)
     return torch.sum(aa12**2) + torch.sum(t12**2)
+
 
 """
 Losses are cumulative
 SMPLLoss setup is same as RootLoss
 """
+
 
 class SMPLLoss(RootLoss):
     def forward(self, observed_data, pred_data, nsteps, valid_mask=None):
@@ -531,7 +557,8 @@ class SMPLLoss(RootLoss):
         if 'verts3d' in pred_data and self.loss_weights["penetration"] > 0.0:
             print('???????????????????????????????? inter-penetration loss')
             # print(pred_data["verts3d"].shape, pred_data['is_right'].shape)
-            order = torch.sum(pred_data['is_right'], dim=-1)//pred_data['is_right'].shape[1]
+            order = torch.sum(pred_data['is_right'],
+                              dim=-1)//pred_data['is_right'].shape[1]
 
             if len(order) > 1:
                 cur_loss = 0
@@ -543,7 +570,8 @@ class SMPLLoss(RootLoss):
                     r_verts = pred_data["verts3d"][0]
 
                 for idx in range(len(l_verts)):
-                    cur_loss += self.inter_penetration_loss(v1=l_verts[idx:idx+1], v2=r_verts[idx:idx+1])
+                    cur_loss += self.inter_penetration_loss(
+                        v1=l_verts[idx:idx+1], v2=r_verts[idx:idx+1])
 
                 loss += self.loss_weights["penetration"] * cur_loss
                 stats_dict["penetration"] = cur_loss
@@ -847,11 +875,11 @@ class GeneralContactLoss(nn.Module):
         """
         Compute intersection and contact between two meshes and resolves.
         """
-    
+
         self.region_aggregation_type = region_aggregation_type
         self.squared = squared_dist
 
-        self.criterion = self.init_loss()       
+        self.criterion = self.init_loss()
 
         # create extra vertex and faces to close back of the mouth to maske
         # the mano mesh watertight.
@@ -860,27 +888,27 @@ class GeneralContactLoss(nn.Module):
         if self.model_type == 'mano':
             # add faces that make the hand mesh watertight
             faces_new = torch.tensor([[92, 38, 234],
-                                [234, 38, 239],
-                                [38, 122, 239],
-                                [239, 122, 279],
-                                [122, 118, 279],
-                                [279, 118, 215],
-                                [118, 117, 215],
-                                [215, 117, 214],
-                                [117, 119, 214],
-                                [214, 119, 121],
-                                [119, 120, 121],
-                                [121, 120, 78],
-                                [120, 108, 78],
-                                [78, 108, 79]])
+                                      [234, 38, 239],
+                                      [38, 122, 239],
+                                      [239, 122, 279],
+                                      [122, 118, 279],
+                                      [279, 118, 215],
+                                      [118, 117, 215],
+                                      [215, 117, 214],
+                                      [117, 119, 214],
+                                      [214, 119, 121],
+                                      [119, 120, 121],
+                                      [121, 120, 78],
+                                      [120, 108, 78],
+                                      [78, 108, 79]])
 
             r_faces = torch.cat([faces, faces_new.to(faces.device)], dim=0)
-            l_faces = r_faces[:,[0,2,1]].clone()
+            l_faces = r_faces[:, [0, 2, 1]].clone()
 
             self.register_buffer('l_faces', l_faces)
             self.register_buffer('r_faces', r_faces)
 
-        # low resolution mesh 
+        # low resolution mesh
         # inner_mouth_verts_path = f'{body_model_utils_folder}/lowres_{model_type}.pkl'
         # self.low_res_mesh = pickle.load(open(inner_mouth_verts_path, 'rb'))
 
@@ -892,9 +920,9 @@ class GeneralContactLoss(nn.Module):
     def to_lowres(self, v, is_right):
         v = v
         if is_right == 0:
-            t = v[:,self.l_faces,:]
+            t = v[:, self.l_faces, :]
         elif is_right == 1:
-            t = v[:,self.r_faces,:]
+            t = v[:, self.r_faces, :]
         else:
             raise ValueError
 
@@ -922,11 +950,11 @@ class GeneralContactLoss(nn.Module):
                 interior_v1 = winding_numbers(v1, t2l).ge(0.99)
                 interior_v2 = winding_numbers(v2, t1l).ge(0.99)
 
-            # visu results 
+            # visu results
             # if True:
-            #     import trimesh 
+            #     import trimesh
             #     mesh = trimesh.Trimesh(
-            #         vertices=v2l[0].detach().cpu().numpy(), 
+            #         vertices=v2l[0].detach().cpu().numpy(),
             #         faces=self.l_faces.cpu().numpy().astype(np.int32),
             #     )
             #     col = 255 * np.ones((778, 4))
@@ -945,7 +973,7 @@ class GeneralContactLoss(nn.Module):
 
             #     # Other direction
             #     mesh = trimesh.Trimesh(
-            #         vertices=v1l[0].detach().cpu().numpy(), 
+            #         vertices=v1l[0].detach().cpu().numpy(),
             #         faces=self.r_faces.cpu().numpy().astype(np.int32),
             #     )
             #     col = 255 * np.ones((778, 4))
@@ -971,49 +999,54 @@ class GeneralContactLoss(nn.Module):
                     v2l, t2l = self.to_lowres(v2[[bidx]], nn)
 
                     # compute intersection between v1 and v2
-                    curr_interior_v1 = winding_numbers(v1[[bidx]], t2l.detach()).ge(0.99)[0]
-                    curr_interior_v2 = winding_numbers(v2[[bidx]], t1l.detach()).ge(0.99)[0]
-                    crit_v1, crit_v2 = torch.any(curr_interior_v1), torch.any(curr_interior_v2)
+                    curr_interior_v1 = winding_numbers(
+                        v1[[bidx]], t2l.detach()).ge(0.99)[0]
+                    curr_interior_v2 = winding_numbers(
+                        v2[[bidx]], t1l.detach()).ge(0.99)[0]
+                    crit_v1, crit_v2 = torch.any(
+                        curr_interior_v1), torch.any(curr_interior_v2)
                 else:
                     curr_interior_v1 = interior_v1[bidx]
                     curr_interior_v2 = interior_v2[bidx]
-                    crit_v1, crit_v2 = torch.any(interior_v1[bidx]), torch.any(interior_v2[bidx])
+                    crit_v1, crit_v2 = torch.any(
+                        interior_v1[bidx]), torch.any(interior_v2[bidx])
 
                 bloss = torch.tensor(0.0, device=v1.device)
                 if crit_v1 and crit_v2:
                     # find vertices that are close to each other between v1 and v2
-                    #squared_dist = pcl_pcl_pairwise_distance(
+                    # squared_dist = pcl_pcl_pairwise_distance(
                     #    v1[:,interior_v1[bidx],:], v2[:, interior_v2[bidx], :], squared=self.squared
-                    #)
+                    # )
                     squared_dist_v1v2 = pcl_pcl_pairwise_distance(
-                        v1[[[bidx]],curr_interior_v1,:], v2[[bidx]], squared=self.squared)
+                        v1[[[bidx]], curr_interior_v1, :], v2[[bidx]], squared=self.squared)
                     squared_dist_v2v1 = pcl_pcl_pairwise_distance(
                         v2[[[bidx]], curr_interior_v2, :], v1[[bidx]], squared=self.squared)
- 
+
                     v1_to_v2 = (squared_dist_v1v2[0].min(1)[0] * factor)**2
-                    #v1_to_v2 = 10.0 * (torch.tanh(v1_to_v2 / 10.0)**2)
+                    # v1_to_v2 = 10.0 * (torch.tanh(v1_to_v2 / 10.0)**2)
                     bloss += v1_to_v2.sum()
-                    
+
                     v2_to_v1 = (squared_dist_v2v1[0].min(1)[0] * factor)**2
-                    #v2_to_v1 = 10.0 * (torch.tanh(v2_to_v1 / 10.0)**2)
+                    # v2_to_v1 = 10.0 * (torch.tanh(v2_to_v1 / 10.0)**2)
                     bloss += v2_to_v1.sum()
 
                 batch_losses.append(bloss)
 
             # compute loss
             if len(batch_losses) > 0:
-                loss = sum(batch_losses) / len(batch_losses)   
+                loss = sum(batch_losses) / len(batch_losses)
 
-            #if loss > 1.0:
+            # if loss > 1.0:
             #    import ipdb; ipdb.set_trace()
 
             return loss
 
-        return loss_func 
+        return loss_func
 
     def forward(self, **args):
         losses = self.criterion(**args)
         return losses
+
 
 def pose_prior_loss(latent_pose_pred, mask=None):
     """

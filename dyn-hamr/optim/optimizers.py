@@ -15,7 +15,6 @@ from vis.viewer import AnimationBase
 from .losses import RootLoss, SMPLLoss  # , MotionLoss
 
 
-
 from loguru import logger
 
 from typing import Dict, Any, List, Tuple, Optional
@@ -34,17 +33,18 @@ Stage 3: fit poses and roots in same global coordinate frame
 class StageOptimizer(object):
     def __init__(
         self,
-        name,
+        name: str,
         model,
-        param_names,
-        lr=1.0,
-        lbfgs_max_iter=20,
-        save_every=10,
-        vis_every=-1,
-        save_meshes=True,
-        max_chunk_steps=10,
+        param_names: List[str],
+        lr: float = 1.0,
+        lbfgs_max_iter: int = 20,
+        save_every: int = 10,
+        vis_every: int = -1,
+        save_meshes: bool = True,
+        max_chunk_steps: int = 10,
         **kwargs,
     ):
+        logger.info(f"Initializing StageOptimizer {name} for {param_names}")
         Logger.log(f"INITIALIZING OPTIMIZER {name} for {param_names}")
         self.name = name
         self.model = model
@@ -72,7 +72,7 @@ class StageOptimizer(object):
         self.reached_max = False
         self.reached_max_iter = -1
 
-    def set_opt_vars(self, param_names):
+    def set_opt_vars(self, param_names: List[str]):
         Logger.log("Set param names:")
         Logger.log(param_names)
 
@@ -82,10 +82,10 @@ class StageOptimizer(object):
             getattr(self.model.params, name) for name in self.param_names
         ]
 
-    def forward_pass(self, obs_data):
+    def forward_pass(self, obs_data: Dict[str, Any]):
         raise NotImplementedError
 
-    def load_checkpoint(self, out_dir, device=None):
+    def load_checkpoint(self, out_dir: str, device: Optional[torch.device] = None):
         if device is None:
             device = torch.device("cpu")
 
@@ -103,7 +103,7 @@ class StageOptimizer(object):
             Logger.log(
                 f"Optimizer loaded from {optim_path} at iter {self.cur_step}")
 
-    def save_checkpoint(self, out_dir):
+    def save_checkpoint(self, out_dir: str):
         param_path = os.path.join(out_dir, f"{self.name}_params.pth")
         param_dict = self.model.params.get_dict()
         if "world_scale" in param_dict:
@@ -122,7 +122,7 @@ class StageOptimizer(object):
         )
         Logger.log(f"Optimizer saved at {optim_path}")
 
-    def save_results(self, out_dir, seq_name):
+    def save_results(self, out_dir: str, seq_name: str):
         """
         pred dict will be a dictionary of trajectories.
         each trajectory will have params and lists of trimesh sequences
@@ -140,7 +140,8 @@ class StageOptimizer(object):
             out_path = f"{out_dir}/{seq_name}_{i:06d}_{name}_results.npz"
             Logger.log(f"saving params to {out_path}")
             np.savez(out_path, **results)
-            logger.info(f"Save {name} results to {out_path}\nKeys: {list(results.keys())}")
+            logger.info(
+                f"Save {name} results to {out_path}\nKeys: {list(results.keys())}")
 
         # also save the cameras
         # print('save the cameras in ptimizer.py save_results')
@@ -214,7 +215,7 @@ class StageOptimizer(object):
     #                 tmesh = vertices_to_trimesh(verts[t][0].detach().cpu().numpy(), r_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=1)
     #                 tmesh.export(os.path.join(scene_dir, f'{str(t).zfill(6)}_1.obj'))
 
-    def vis_result(self, res_dir, obs_data, vis:Optional[AnimationBase]=None, num_steps=-1):
+    def vis_result(self, res_dir: str, obs_data: Dict[str, Any], vis: Optional[AnimationBase] = None, num_steps: int = -1):
         if vis is None or self.vis_every < 0:
             return
 
@@ -238,7 +239,7 @@ class StageOptimizer(object):
         animate_scene(vis, scene_dict, res_pre,
                       render_views=["src_cam", "above"])
 
-    def log_losses(self, stats_dict):
+    def log_losses(self, stats_dict: Dict[str, Any]):
         stats_dict = move_to(detach_all(stats_dict), "cpu")
         log_cur_stats(
             stats_dict,
@@ -264,7 +265,7 @@ class StageOptimizer(object):
             writer.add_scalar(f"{self.name}/{loss_name}",
                               loss_mean, self.cur_step)
 
-    def plot_losses(self, res_dir):
+    def plot_losses(self, res_dir: str):
         """
         plot a box plot for each BFGS iteration
         """
@@ -278,7 +279,7 @@ class StageOptimizer(object):
             plt.boxplot(loss_vals, labels=times, showfliers=False)
             plt.savefig(f"{res_dir}/{loss_name}.png")
 
-    def run(self, obs_data, num_iters, out_dir, vis:Optional[AnimationBase]=None, writer=None):
+    def run(self, obs_data: Dict[str, Any], num_iters: int, out_dir: str, vis: Optional[AnimationBase] = None, writer=None):
         self.cur_step = 0
         self.loss.cur_step = 0
         res_dir = os.path.join(out_dir, self.name)
@@ -354,7 +355,7 @@ class StageOptimizer(object):
         self.vis_result(res_dir, obs_data, vis)
         # self.save_meshes_all(res_dir, obs_data, seq_name)
 
-    def optim_step(self, obs_data, i, writer=None):
+    def optim_step(self, obs_data: Dict[str, Any], i: int, writer=None):
         def closure():
             self.optim.zero_grad()
             # print('******************************', i)
