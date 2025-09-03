@@ -368,9 +368,10 @@ class CameraData(object):
             #             self.cam_R = torch.einsum("ij,...jk->...ik", R0, cam_R[sidx:eidx])
             #             self.cam_t = t0 + torch.einsum("ij,...j->...i", R0, cam_t[sidx:eidx])
             #             t0 = -cam_t[sidx:eidx].mean(dim=0) + torch.randn(3) * 0.1
-            t0 = -cam_t[sidx: sidx + 1] + torch.randn(3) * 0.1
+            # NOTE (hsc): this is unwanted random initialization.
+            # t0 = -cam_t[sidx: sidx + 1] + torch.randn(3) * 0.1
             self.cam_R = cam_R[sidx:eidx]
-            self.cam_t = cam_t[sidx:eidx] - t0
+            self.cam_t = cam_t[sidx:eidx]#  - t0
         else:
             raise RuntimeError(f"{fpath} does not exist!!!")
 
