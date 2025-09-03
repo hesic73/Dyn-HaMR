@@ -3,6 +3,7 @@ import imageio
 import glob
 import json
 import subprocess
+from typing import List
 
 import numpy as np
 import torch
@@ -98,15 +99,15 @@ def save_input_frames_ffmpeg(dataset, out_dir, name="input", fps=30, overwrite=F
     return vid_path
 
 
-def save_input_frames(dataset, vid_path, fps=30, overwrite=False):
+def save_input_frames(img_paths:List[str], vid_path:str, fps:int=30, overwrite:bool=False):
     if not overwrite and os.path.isfile(vid_path):
         return
 
     writer = imageio.get_writer(vid_path, fps=fps)
-    for path in dataset.sel_img_paths:
+    for path in img_paths:
         writer.append_data(imageio.imread(path))
     writer.close()
-    print(f"SAVED {len(dataset.sel_img_paths)} INPUT FRAMES TO {vid_path}")
+    print(f"SAVED {len(img_paths)} INPUT FRAMES TO {vid_path}")
     return vid_path
 
 

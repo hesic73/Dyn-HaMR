@@ -17,10 +17,14 @@ from .tools import mesh_to_geometry, smooth_results
 
 from vis.viewer import make_checkerboard, AnimationBase
 
+from optim.base_scene import BaseSceneModel
+
+from loguru import logger
+
 from typing import List, Dict, Any, Tuple, Optional
 
 
-def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
+def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth: bool):
     """
     :param res (dict) with (B, T, *) tensor elements, B tracks and T frames
     :param vis_mask (B, T) with visibility of each track in each frame
@@ -28,7 +32,6 @@ def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth):
     """
     print("RESULT FIELDS", res.keys())
     res = detach_all(res)
-    # print(res.keys(), res["is_right"])
     with torch.no_grad():
         if temporal_smooth:
             print('running temporal smooth')
@@ -150,16 +153,16 @@ def build_scene_dict(
 
 
 def animate_scene(
-    vis:AnimationBase,
-    scene,
-    out_name,
-    seq_name=None,
-    accumulate=False,
+    vis: AnimationBase,
+    scene: BaseSceneModel,
+    out_name: str,
+    seq_name: Optional[str] = None,
+    accumulate: bool = False,
     render_views: List[str] = ["src_cam", "front", "above", "side"],
-    render_bg=True,
-    render_cam=True,
-    render_ground=True,
-    debug=False,
+    render_bg: bool = True,
+    render_cam: bool = True,
+    render_ground: bool = True,
+    debug: bool = False,
     **kwargs,
 ):
     if len(render_views) < 1:
@@ -200,13 +203,13 @@ def animate_scene(
 
 
 def build_pyrender_scene(
-    vis:AnimationBase,
-    scene,
-    seq_name,
-    render_views=["src_cam", "front", "above", "side"],
-    render_cam=True,
-    accumulate=False,
-    debug=False,
+    vis: AnimationBase,
+    scene: BaseSceneModel,
+    seq_name: Optional[str] = None,
+    render_views: List[str] = ["src_cam", "front", "above", "side"],
+    render_cam: bool = True,
+    accumulate: bool = False,
+    debug: bool = False,
 ):
     """
     :param vis (viewer object)
@@ -342,7 +345,13 @@ def make_video_grid_2x2(out_path: str, vid_paths: List[str], overwrite: bool = F
         f"-map '[v]' {out_path} -y"
     )
 
-    print(cmd)
-    subprocess.call(cmd, shell=True, stdin=subprocess.PIPE)
+    logger.info(f"FFmpeg command:\n{cmd}")
+    subprocess.call(
+        cmd,
+        shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
-    print(f"Video grid created: {out_path}")
+    logger.info(f"Video grid created: {out_path}")
