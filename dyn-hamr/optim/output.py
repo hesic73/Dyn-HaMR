@@ -10,6 +10,11 @@ import torch
 
 from util.tensor import move_to, detach_all, to_torch
 from util.logger import Logger
+from util.export_utils import export_world_poses
+
+from optim.base_scene import BaseSceneModel
+
+from loguru import logger
 
 
 def get_results_paths(res_dir):
@@ -44,7 +49,7 @@ def load_result(res_path_dict):
     return res_dict
 
 
-def save_initial_predictions(model, out_dir, seq_name):
+def save_initial_predictions(model: BaseSceneModel, out_dir: str, seq_name: str):
     os.makedirs(out_dir, exist_ok=True)
     with torch.no_grad():
         print('go into get_optim_result from output.py save_initial_predictions')
@@ -55,6 +60,10 @@ def save_initial_predictions(model, out_dir, seq_name):
         out_path = f"{out_dir}/{seq_name}_{0:06d}_init_{name}_results.npz"
         Logger.log(f"saving initial results to {out_path}")
         np.savez(out_path, **results)
+        export_world_poses(
+            out_path, f"{out_dir}/{seq_name}_{0:06d}_init_world_poses.npz")
+        logger.info(
+            f"Export world poses to {out_dir}/{seq_name}_{0:06d}_init_world_poses.npz")
         # print('cam_R in save_initial_predictions: ', results['cam_R'].shape, results['cam_R'])
         # print((results['cam_R'][0] == results['cam_R'][1]).all())
         # print((results['cam_R'][1] == results['cam_R'][2]).all())
@@ -99,7 +108,7 @@ def save_input_frames_ffmpeg(dataset, out_dir, name="input", fps=30, overwrite=F
     return vid_path
 
 
-def save_input_frames(img_paths:List[str], vid_path:str, fps:int=30, overwrite:bool=False):
+def save_input_frames(img_paths: List[str], vid_path: str, fps: int = 30, overwrite: bool = False):
     if not overwrite and os.path.isfile(vid_path):
         return
 

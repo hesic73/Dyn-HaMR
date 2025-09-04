@@ -12,6 +12,8 @@ from util.tensor import move_to, detach_all
 from vis.output import prep_result_vis, animate_scene
 from vis.viewer import AnimationBase
 
+from util.export_utils import export_world_poses
+
 from .losses import RootLoss, SMPLLoss  # , MotionLoss
 
 
@@ -142,6 +144,9 @@ class StageOptimizer(object):
             np.savez(out_path, **results)
             logger.info(
                 f"Save {name} results to {out_path}\nKeys: {list(results.keys())}")
+
+            export_world_poses(out_path, f"{out_dir}/{seq_name}_{i:06d}_world_poses.npz")
+            logger.info(f"Export world poses to {out_dir}/{seq_name}_{i:06d}_world_poses.npz")
 
         # also save the cameras
         # print('save the cameras in ptimizer.py save_results')
