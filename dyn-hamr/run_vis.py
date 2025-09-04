@@ -22,16 +22,24 @@ from util.tensor import get_device, move_to, detach_all, to_torch
 from vis.output import prep_result_vis, animate_scene, make_video_grid_2x2
 from vis.tools import vis_keypoints
 from vis.viewer import init_viewer
+from data.dataset import MultiPeopleDataset
+
 import time
 from geometry.mesh import save_mesh_scenes, vertices_to_trimesh
 
 from loguru import logger
 from typing import List, Optional
 
-LIGHT_BLUE = (0.65098039,  0.74117647,  0.85882353)
+LIGHT_BLUE = (0.65098039, 0.74117647, 0.85882353)
 
 
-def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
+def save_meshes_all(
+    cfg,
+    dataset: MultiPeopleDataset,
+    res_dicts,
+    dev_id: int,
+    mesh_dirs: List[str],
+):
     B = len(dataset)
     T = dataset.seq_len
     loader = DataLoader(dataset, batch_size=B, shuffle=False)
@@ -42,8 +50,8 @@ def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
     cfg = resolve_cfg_paths(cfg)
     # Instantiate MANO model
     mano_cfg = {k.lower(): v for k, v in dict(cfg.MANO).items()}
-    print('initializing MANO model with cfgs:', mano_cfg, 'B*T', B*T)
-    hand_model = MANO(batch_size=B*T, pose2rot=True, **mano_cfg).to(device)
+    print("initializing MANO model with cfgs:", mano_cfg, "B*T", B * T)
+    hand_model = MANO(batch_size=B * T, pose2rot=True, **mano_cfg).to(device)
 
     for res_dict, mesh_dir in zip(res_dicts, mesh_dirs):
         res_dict = move_to(res_dict, device)
@@ -53,13 +61,15 @@ def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
                 obs_data["vis_mask"],
                 obs_data["track_id"],
                 hand_model,
-                temporal_smooth=cfg.temporal_smooth
+                temporal_smooth=cfg.temporal_smooth,
             ),
             "cpu",
         )
 
         scene_dir = mesh_dir
-        verts, joints, colors, l_faces, r_faces, is_right, bounds = scene_dict["geometry"]
+        verts, joints, colors, l_faces, r_faces, is_right, bounds = scene_dict[
+            "geometry"
+        ]
         T = len(verts)
         print(f"{T} mesh frames for ", mesh_dir)
         times = list(range(0, T, 1))
@@ -70,14 +80,13 @@ def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
                 vv = t
 
         if flag:
-            init_trans = (joints[vv][0][9].clone() +
-                          joints[vv][1][9].clone()) / 2
+            init_trans = (joints[vv][0][9].clone() + joints[vv][1][9].clone()) / 2
         else:
             init_trans = joints[0][0][9].clone()
 
         for t in times:
             if len(is_right[t]) > 1:
-                assert (is_right[t].cpu().numpy().tolist() == [0, 1])
+                assert is_right[t].cpu().numpy().tolist() == [0, 1]
                 # l_meshes = make_batch_mesh(verts[t][0][None], l_faces[t], colors[t][0][None])
                 # r_meshes = make_batch_mesh(verts[t][1][None], r_faces[t], colors[t][1][None])
                 # assert len(l_meshes) == 1
@@ -85,18 +94,24 @@ def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
 
                 verts[t][0] -= init_trans
                 joints[t][0] -= init_trans
-                tmesh = vertices_to_trimesh(verts[t][0].detach().cpu().numpy(
-                ), l_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=0)
-                tmesh.export(os.path.join(
-                    scene_dir, f'{str(t).zfill(6)}_0.obj'))
+                tmesh = vertices_to_trimesh(
+                    verts[t][0].detach().cpu().numpy(),
+                    l_faces[t].detach().cpu().numpy(),
+                    LIGHT_BLUE,
+                    is_right=0,
+                )
+                tmesh.export(os.path.join(scene_dir, f"{str(t).zfill(6)}_0.obj"))
                 # np.save(f'{str(t).zfill(6)}_0.npy', joints[t][0].detach().cpu().numpy())
 
                 verts[t][1] -= init_trans
                 joints[t][1] -= init_trans
-                tmesh = vertices_to_trimesh(verts[t][1].detach().cpu().numpy(
-                ), r_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=1)
-                tmesh.export(os.path.join(
-                    scene_dir, f'{str(t).zfill(6)}_1.obj'))
+                tmesh = vertices_to_trimesh(
+                    verts[t][1].detach().cpu().numpy(),
+                    r_faces[t].detach().cpu().numpy(),
+                    LIGHT_BLUE,
+                    is_right=1,
+                )
+                tmesh.export(os.path.join(scene_dir, f"{str(t).zfill(6)}_1.obj"))
                 # np.save(f'{str(t).zfill(6)}_1.npy', joints[t][1].detach().cpu().numpy())
 
             else:
@@ -104,19 +119,25 @@ def save_meshes_all(cfg, dataset, res_dicts, dev_id, mesh_dirs, num_steps=-1):
                 if is_right[t] == 0:
                     verts[t][0] -= init_trans
                     joints[t][0] -= init_trans
-                    tmesh = vertices_to_trimesh(verts[t][0].detach().cpu().numpy(
-                    ), l_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=0)
-                    tmesh.export(os.path.join(
-                        scene_dir, f'{str(t).zfill(6)}_0.obj'))
+                    tmesh = vertices_to_trimesh(
+                        verts[t][0].detach().cpu().numpy(),
+                        l_faces[t].detach().cpu().numpy(),
+                        LIGHT_BLUE,
+                        is_right=0,
+                    )
+                    tmesh.export(os.path.join(scene_dir, f"{str(t).zfill(6)}_0.obj"))
                     # np.save(f'{str(t).zfill(6)}_0.npy', joints[t][0].detach().cpu().numpy())
 
                 elif is_right[t] == 1:
                     verts[t][0] -= init_trans
                     joints[t][0] -= init_trans
-                    tmesh = vertices_to_trimesh(verts[t][0].detach().cpu().numpy(
-                    ), r_faces[t].detach().cpu().numpy(), LIGHT_BLUE, is_right=1)
-                    tmesh.export(os.path.join(
-                        scene_dir, f'{str(t).zfill(6)}_1.obj'))
+                    tmesh = vertices_to_trimesh(
+                        verts[t][0].detach().cpu().numpy(),
+                        r_faces[t].detach().cpu().numpy(),
+                        LIGHT_BLUE,
+                        is_right=1,
+                    )
+                    tmesh.export(os.path.join(scene_dir, f"{str(t).zfill(6)}_1.obj"))
                     # np.save(f'{str(t).zfill(6)}_1.npy', joints[t][0].detach().cpu().numpy())
 
 
@@ -212,7 +233,7 @@ def run_vis(
             )
 
 
-def get_input_dict(dataset):
+def get_input_dict(dataset: MultiPeopleDataset):
     dataset.load_data(interp_input=False)
     d = dataset.data_dict
     input_params = {
@@ -225,7 +246,9 @@ def get_input_dict(dataset):
     return input_params
 
 
-def render_keypoints_2d(dataset, save_dir, overwrite=False):
+def render_keypoints_2d(
+    dataset: MultiPeopleDataset, save_dir: str, overwrite: bool = False
+):
     """
     render 2d keypoints for each track
     """
@@ -233,19 +256,21 @@ def render_keypoints_2d(dataset, save_dir, overwrite=False):
     out_dir = f"{save_dir}/{dataset.seq_name}_joints2d"
     B, T = dataset.n_tracks, dataset.seq_len
     if not overwrite and (os.path.isdir(out_dir) and len(os.listdir(out_dir)) >= B * T):
-        print(f"Keypoints already rendered in {out_dir}")
+        print(f"Keypoints already rendered in {out_dir}. Skipping...")
         return
 
     os.makedirs(out_dir, exist_ok=True)
     for i, tid in enumerate(dataset.track_ids):
         joints2d = dataset.data_dict["joints2d"][i]  # (T, J, 3)
         for t, sel_img_name in enumerate(dataset.sel_img_names):
-            img = vis_keypoints(joints2d[t: t + 1], dataset.img_size)
+            img = vis_keypoints(joints2d[t : t + 1], dataset.img_size)
             out_path = f"{out_dir}/{sel_img_name}_{tid}.png"
             imageio.imwrite(out_path, img)
 
 
-def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
+def render_results(
+    cfg, dataset: MultiPeopleDataset, dev_id, res_dicts, out_names, **kwargs
+):
     """
     render results for all selected phases
     """
@@ -266,8 +291,8 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
     cfg = resolve_cfg_paths(cfg)
     # Instantiate MANO model
     mano_cfg = {k.lower(): v for k, v in dict(cfg.MANO).items()}
-    print('initializing MANO model with cfgs:', mano_cfg, 'B*T', B*T)
-    hand_model = MANO(batch_size=B*T, pose2rot=True, **mano_cfg).to(device)
+    print("initializing MANO model with cfgs:", mano_cfg, "B*T", B * T)
+    hand_model = MANO(batch_size=B * T, pose2rot=True, **mano_cfg).to(device)
     vis = init_viewer(
         dataset.img_size,
         cam_data["intrins"][0],
@@ -278,7 +303,7 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
 
     save_paths_all = []
     for res_dict, out_name in zip(res_dicts, out_names):
-        print(f'preparing results for rendering {out_name}')
+        print(f"preparing results for rendering {out_name}")
         # time.sleep(5)
         res_dict = move_to(res_dict, device)
         scene_dict = prep_result_vis(
@@ -286,7 +311,7 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
             obs_data["vis_mask"],
             obs_data["track_id"],
             hand_model,
-            temporal_smooth=cfg.temporal_smooth
+            temporal_smooth=cfg.temporal_smooth,
         )
         print(kwargs)
         save_paths = animate_scene(
@@ -301,7 +326,7 @@ def render_results(cfg, dataset, dev_id, res_dicts, out_names, **kwargs):
 
 def visualize_log(log_dir, dev_id, phases, save_dir=None, **kwargs):
     cfg = load_config_from_log(log_dir)
-    cfg.data.root = str(Path(__file__).parent/"_video_root")
+    cfg.data.root = str(Path(__file__).parent / "_video_root")
 
     # make sure we get all necessary inputs
     cfg.data.sources = expand_source_paths(cfg.data.sources)
@@ -312,8 +337,7 @@ def visualize_log(log_dir, dev_id, phases, save_dir=None, **kwargs):
         print(f"No tracks in dataset, skipping")
         return
 
-    run_vis(cfg, dataset, log_dir, dev_id,
-            phases=phases, save_dir=save_dir, **kwargs)
+    run_vis(cfg, dataset, log_dir, dev_id, phases=phases, save_dir=save_dir, **kwargs)
 
 
 def launch_vis(i, args):
@@ -328,7 +352,7 @@ def launch_vis(i, args):
         save_dir = f"{args.save_root}/{exp_name}"
         os.makedirs(save_dir, exist_ok=True)
 
-    print('args.save_root: ', args.save_root)
+    print("args.save_root: ", args.save_root)
     visualize_log(
         log_dir,
         dev_id,
@@ -376,7 +400,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_root", required=True)
-    parser.add_argument("--save_root", default='../outputs/vis_save_root')
+    parser.add_argument("--save_root", default="../outputs/vis_save_root")
     parser.add_argument("--phases", nargs="*", default=["hamer"])
     parser.add_argument("--gpus", nargs="*", default=[0])
     parser.add_argument(

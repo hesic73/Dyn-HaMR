@@ -76,7 +76,7 @@ def run_opt(cfg, dataset, out_dir, device):
     # save cameras
     cam_R, cam_t = dataset.cam_data.cam2world()
     intrins = dataset.cam_data.intrins
-    save_camera_json(f"cameras.json", cam_R, cam_t, intrins)
+    save_camera_json("cameras.json", cam_R, cam_t, intrins)
 
     # check whether the cameras are static
     # if static, cannot optimize scale

@@ -177,7 +177,7 @@ class MultiPeopleDataset(Dataset):
     def __len__(self):
         return self.n_tracks
 
-    def load_data(self, interp_input=True):
+    def load_data(self, interp_input:bool=True):
         if len(self.data_dict) > 0:
             return
 
@@ -376,9 +376,6 @@ class CameraData(object):
             raise RuntimeError(f"{fpath} does not exist!!!")
 
         Logger.log(f"Images have {img_w}x{img_h}, intrins {self.intrins[0]}")
-
-    def world2cam(self) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.cam_R, self.cam_t
 
     def cam2world(self) -> Tuple[torch.Tensor, torch.Tensor]:
         print("dataset.py, cam2world: ", self.cam_R)

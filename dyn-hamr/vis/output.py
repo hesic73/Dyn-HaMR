@@ -1,14 +1,10 @@
 import os
-import cv2
-import imageio
-import numpy as np
 import torch
 import subprocess
 
 from body_model import run_mano
 from geometry import camera as cam_util
 from geometry.mesh import make_batch_mesh, save_mesh_scenes
-from geometry.plane import parse_floor_plane, get_plane_transform
 
 from util.tensor import detach_all, to_torch, move_to
 
@@ -23,7 +19,13 @@ from loguru import logger
 from typing import List, Dict, Any, Tuple, Optional
 
 
-def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth: bool):
+def prep_result_vis(
+    res: Dict[str, Any],
+    vis_mask: torch.Tensor,
+    track_ids: torch.Tensor,
+    body_model,
+    temporal_smooth: bool,
+):
     """
     :param res (dict) with (B, T, *) tensor elements, B tracks and T frames
     :param vis_mask (B, T) with visibility of each track in each frame
@@ -33,9 +35,10 @@ def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth: bool)
     res = detach_all(res)
     with torch.no_grad():
         if temporal_smooth:
-            print('running temporal smooth')
+            print("running temporal smooth")
             res["root_orient"], res["pose_body"], res["trans"] = smooth_results(
-                res["root_orient"], res["pose_body"], res["is_right"], res["trans"])
+                res["root_orient"], res["pose_body"], res["is_right"], res["trans"]
+            )
 
         world_smpl = run_mano(
             body_model,
@@ -47,39 +50,39 @@ def prep_result_vis(res, vis_mask, track_ids, body_model, temporal_smooth: bool)
         )
 
     T_w2c = None
-    floor_plane = None
     if "cam_R" in res and "cam_t" in res:
         T_w2c = cam_util.make_4x4_pose(res["cam_R"][0], res["cam_t"][0])
     if "floor_plane" in res:
-        floor_plane = res["floor_plane"][0]
+        raise ValueError("floor_plane is not supported")
     return build_scene_dict(
         world_smpl,
         vis_mask,
         track_ids,
         T_w2c=T_w2c,
-        floor_plane=floor_plane,
     )
 
 
 def build_scene_dict(
-    world_smpl, vis_mask, track_ids, T_w2c=None, floor_plane=None, **kwargs
+    world_smpl, vis_mask, track_ids, T_w2c: Optional[torch.Tensor] = None
 ):
     scene_dict = {}
 
     # first get the geometry of the people
     # lists of length T with (B, V, 3), (F, 3), (B, 3)
     scene_dict["geometry"] = mesh_to_geometry(
-        world_smpl["vertices"], world_smpl["joints"], world_smpl["l_faces"], world_smpl["r_faces"], world_smpl["is_right"], vis_mask, track_ids
+        world_smpl["vertices"],
+        world_smpl["joints"],
+        world_smpl["l_faces"],
+        world_smpl["r_faces"],
+        world_smpl["is_right"],
+        vis_mask,
+        track_ids,
     )
 
     if T_w2c is None:
         T_w2c = torch.eye(4)[None]
 
     T_c2w = torch.linalg.inv(T_w2c)
-    # rotate the camera slightly down and translate back and up
-    T = cam_util.make_4x4_pose(
-        cam_util.rotx(-np.pi / 10), torch.tensor([0, -1, -2])
-    ).to(T_c2w.device)
 
     scene_dict["cameras"] = {
         "src_cam": T_c2w,
@@ -89,7 +92,7 @@ def build_scene_dict(
     # Create ground plane based on hand mesh height
     verts = scene_dict["geometry"][0]  # Get vertices from geometry
     if len(verts) > 0:
-        max_height = float('-inf')
+        max_height = float("-inf")
         for frame_verts in verts:
             if len(frame_verts) > 0:
                 # y-coordinate is height
@@ -106,22 +109,11 @@ def build_scene_dict(
         t = torch.tensor([0.0, ground_height, 0.0])
         scene_dict["ground"] = cam_util.make_4x4_pose(R, t)
 
-        # Save ground mesh for Blender debugging
-        import trimesh
-        ground_mesh = make_checkerboard(color0=[0.9, 0.95, 1.0], color1=[
-                                        0.7, 0.8, 0.85], up="y", alpha=1.0)
+        ground_mesh = make_checkerboard(
+            color0=[0.9, 0.95, 1.0], color1=[0.7, 0.8, 0.85], up="y", alpha=1.0
+        )
         ground_mesh.apply_translation([0.0, ground_height, 0.0])
         ground_mesh.export("ground_debug.obj")
-
-    # if floor_plane is not None:
-    #     # compute the ground transform
-    #     # use the first appearance of a track as the reference point
-    #     tid, sid = torch.where(vis_mask > 0)
-    #     idx = tid[torch.argmin(sid)]
-    #     root = world_smpl["joints"][idx, 0, 0].detach().cpu()
-    #     floor = parse_floor_plane(floor_plane.detach().cpu())
-    #     R, t = get_plane_transform(torch.tensor([0.0, 1.0, 0.0]), floor, root)
-    #     scene_dict["ground"] = cam_util.make_4x4_pose(R, t)
 
     return scene_dict
 
@@ -219,8 +211,7 @@ def build_pyrender_scene(
     if len(render_views) < 1:
         return
 
-    assert all(view in ["src_cam", "front", "above", "side"]
-               for view in render_views)
+    assert all(view in ["src_cam", "front", "above", "side"] for view in render_views)
 
     scene = move_to(detach_all(scene), "cpu")
     src_cams = scene["cameras"]["src_cam"]
@@ -277,11 +268,13 @@ def build_pyrender_scene(
     # raise ValueError
     for t in times:
         if len(is_right[t]) > 1:
-            assert (is_right[t].cpu().numpy().tolist() == [0, 1])
+            assert is_right[t].cpu().numpy().tolist() == [0, 1]
             l_meshes = make_batch_mesh(
-                verts[t][0][None], l_faces[t], colors[t][0][None])
+                verts[t][0][None], l_faces[t], colors[t][0][None]
+            )
             r_meshes = make_batch_mesh(
-                verts[t][1][None], r_faces[t], colors[t][1][None])
+                verts[t][1][None], r_faces[t], colors[t][1][None]
+            )
             assert len(l_meshes) == 1
             assert len(r_meshes) == 1
             meshes = [l_meshes[0], r_meshes[0]]
@@ -289,10 +282,12 @@ def build_pyrender_scene(
             assert len(is_right[t]) == 1
             if is_right[t] == 0:
                 meshes = make_batch_mesh(
-                    verts[t][0][None], l_faces[t], colors[t][0][None])
+                    verts[t][0][None], l_faces[t], colors[t][0][None]
+                )
             elif is_right[t] == 1:
                 meshes = make_batch_mesh(
-                    verts[t][0][None], r_faces[t], colors[t][0][None])
+                    verts[t][0][None], r_faces[t], colors[t][0][None]
+                )
 
         if accumulate:
             vis.add_static_meshes(meshes)

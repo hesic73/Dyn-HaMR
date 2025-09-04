@@ -18,6 +18,7 @@ from .params import CameraParams
 # import mano
 
 from loguru import logger
+from typing import Dict, Any
 
 J_HAND = len(MANO_JOINTS) - 1  # no root
 
@@ -43,9 +44,9 @@ class BaseSceneModel(nn.Module):
         body_model,
         pose_prior,
         # fit_gender="neutral",
-        use_init: bool=False,
-        opt_cams: bool=False,
-        opt_scale: bool=True,
+        use_init: bool = False,
+        opt_cams: bool = False,
+        opt_scale: bool = True,
         **kwargs,
     ):
         super().__init__()
@@ -70,7 +71,7 @@ class BaseSceneModel(nn.Module):
         print("Batch size: ", batch_size)
         self.params = CameraParams(batch_size)
 
-    def initialize(self, obs_data, cam_data):
+    def initialize(self, obs_data, cam_data: Dict[str, Any]):
         Logger.log("Initializing scene model with observed data")
 
         # initialize cameras
@@ -84,7 +85,9 @@ class BaseSceneModel(nn.Module):
         # initialize body params
         B, T = self.batch_size, self.seq_len
         device = next(iter(cam_data.values())).device
-        init_betas = torch.mean(obs_data["init_body_shape"], dim=1) # torch.zeros(B, self.num_betas, device=device)
+        init_betas = torch.mean(
+            obs_data["init_body_shape"], dim=1
+        )  # torch.zeros(B, self.num_betas, device=device)
 
         if self.use_init and "init_body_pose" in obs_data:
             init_pose = obs_data["init_body_pose"][:, :, :J_HAND, :]
@@ -117,7 +120,9 @@ class BaseSceneModel(nn.Module):
         if self.use_init and "init_trans" in obs_data:
             # must offset by the root location before applying camera to world transform
             is_right = obs_data["is_right"]
-            pred_data = self.pred_mano(init_trans, init_rot, init_pose, is_right, init_betas)
+            pred_data = self.pred_mano(
+                init_trans, init_rot, init_pose, is_right, init_betas
+            )
             root_loc = pred_data["joints3d"][..., 0, :]  # (B, T, 3)
             init_trans = obs_data["init_trans"]  # (B, T, 3)
             init_trans = (
@@ -149,7 +154,7 @@ class BaseSceneModel(nn.Module):
         """
         Collect predicted outputs (latent_pose, trans, root_orient, betas, body pose) into dict
         """
-        print('running get_optim_result in base_scene.py...')
+        print("running get_optim_result in base_scene.py...")
         res = self.params.get_dict()
         if "latent_pose" in res:
             res["pose_body"] = self.latent2pose(self.params.latent_pose).detach()
@@ -159,7 +164,7 @@ class BaseSceneModel(nn.Module):
         res["intrins"] = self.params.intrins
         return {"world": res}
 
-    def latent2pose(self, latent_pose):
+    def latent2pose(self, latent_pose: torch.Tensor) -> torch.Tensor:
         """
         Converts VPoser latent embedding to aa body pose.
         latent_pose : B x T x D
@@ -177,7 +182,7 @@ class BaseSceneModel(nn.Module):
         else:
             return latent_pose
 
-    def pose2latent(self, body_pose):
+    def pose2latent(self, body_pose: torch.Tensor) -> torch.Tensor:
         """
         Encodes aa body pose to VPoser latent space.
         body_pose : B x T x J*3
@@ -204,7 +209,9 @@ class BaseSceneModel(nn.Module):
         betas : B x D
         """
 
-        mano_out = run_mano(self.body_model, trans, root_orient, body_pose, is_right, betas=betas)
+        mano_out = run_mano(
+            self.body_model, trans, root_orient, body_pose, is_right, betas=betas
+        )
         joints3d, points3d = mano_out["joints"], mano_out["vertices"]
 
         # select desired joints and vertices
@@ -222,7 +229,7 @@ class BaseSceneModel(nn.Module):
         #         - 0.5 * (joints3d_op[:, :, [9, 12]] + joints3d_op[:, :, [12, 9]])
         #     )
         # )
-        verts3d = points3d #[:, :, KEYPT_VERTS, :]
+        verts3d = points3d  # [:, :, KEYPT_VERTS, :]
 
         return {
             "is_right": is_right,
@@ -232,13 +239,17 @@ class BaseSceneModel(nn.Module):
             "joints3d_op": joints3d,  # OP joints
             "l_faces": mano_out["l_faces"],  # index array of faces
             "r_faces": mano_out["r_faces"],  # index array of faces
-            "body_pose": mano_out["body_pose"]
+            "body_pose": mano_out["body_pose"],
         }
 
     def pred_params_mano(self, is_right, reproj=True):
         body_pose = self.latent2pose(self.params.latent_pose)
         pred_data = self.pred_mano(
-            self.params.trans, self.params.root_orient, body_pose, is_right, self.params.betas
+            self.params.trans,
+            self.params.root_orient,
+            body_pose,
+            is_right,
+            self.params.betas,
         )
         # from geometry.mesh import save_mesh_scenes, vertices_to_trimesh
         # LIGHT_BLUE=(0.65098039,  0.74117647,  0.85882353)

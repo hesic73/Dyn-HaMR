@@ -1,6 +1,7 @@
 import os
 import json
 import functools
+from typing import List
 
 import numpy as np
 
@@ -9,7 +10,7 @@ from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation, Slerp
 
 
-def read_keypoints(keypoint_fn):
+def read_keypoints(keypoint_fn: str):
     """
     Only reads body keypoint data of first person.
     """
@@ -30,13 +31,13 @@ def read_keypoints(keypoint_fn):
     return body_keypoints
 
 
-def read_mask_path(path):
+def read_mask_path(path: str):
     mask_path = None
     if not os.path.isfile(path):
         return mask_path
 
     with open(path, "r") as f:
-        data = json.load(path)
+        data = json.load(f)
 
     person_data = data["people"][0]
     if "mask_path" in person_data:
@@ -45,7 +46,7 @@ def read_mask_path(path):
     return mask_path
 
 
-def read_mano_preds(pred_path, tid, num_betas=10):
+def read_mano_preds(pred_path: str, tid: int, num_betas: int = 10):
     """
     reads the betas, body_pose, global orientation and translation of a mano prediction
     exported from phalp outputs
@@ -70,7 +71,9 @@ def read_mano_preds(pred_path, tid, num_betas=10):
     return pose, rot, trans, betas, is_right
 
 
-def load_mano_preds(pred_paths, tid, interp=True, num_betas=10):
+def load_mano_preds(
+    pred_paths: List[str], tid: int, interp: bool = True, num_betas: int = 10
+):
     vis_mask = np.array([os.path.isfile(x) for x in pred_paths])
     vis_idcs = np.where(vis_mask)[0]
 
@@ -78,10 +81,11 @@ def load_mano_preds(pred_paths, tid, interp=True, num_betas=10):
     stack_fnc = functools.partial(np.stack, axis=0)
     # (N, 16, 3), (N, 3), (N, 3), (N, 10)
     pose, orient, trans, betas, is_right = map(
-        stack_fnc, zip(*[read_mano_preds(p, tid, num_betas=num_betas) for p in pred_paths])
+        stack_fnc,
+        zip(*[read_mano_preds(p, tid, num_betas=num_betas) for p in pred_paths]),
     )
 
-    assert len(np.where(is_right!=int(tid))[0]) == 0
+    assert len(np.where(is_right != int(tid))[0]) == 0
     if not interp:
         return pose, orient, trans, betas, is_right
 

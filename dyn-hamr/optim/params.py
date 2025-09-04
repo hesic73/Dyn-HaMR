@@ -82,7 +82,7 @@ class CameraParams(Params):
     """
 
     def set_cameras(
-        self, cam_data: Dict[str, torch.Tensor], opt_scale: bool, opt_cams: bool, opt_focal: bool, **kwargs
+        self, cam_data: Dict[str, Any], opt_scale: bool, opt_cams: bool, opt_focal: bool, **kwargs
     ):
         self.opt_scale = opt_scale
         self.opt_cams = opt_cams
@@ -106,8 +106,8 @@ class CameraParams(Params):
         else:
             self.cam_f = cam_f
 
-        self._cam_R = cam_R  # (T, 3, 3)
-        self._cam_t = cam_t  # (T, 3)
+        self._cam_R: torch.Tensor = cam_R  # (T, 3, 3)
+        self._cam_t: torch.Tensor = cam_t  # (T, 3)
 
         world_scale = torch.ones(1, 1, device=device)
         if self.opt_scale:
