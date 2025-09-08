@@ -18,7 +18,8 @@ vis:
   phases:
     # - motion_chunks
     # - input
-    # - root_fit
+    - init
+    - root_fit
     - smooth_fit
     - prior
     # - init

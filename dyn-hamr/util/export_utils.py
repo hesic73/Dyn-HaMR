@@ -40,3 +40,11 @@ def export_world_poses(results_path: str, save_path: str):
              cam_t_world=cam_t_world,
              hand_trans_world=hand_trans_world,
              hand_orient_world_euler=hand_orient_world_euler)
+
+
+if __name__ == "__main__":
+    import tempfile
+    import os
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = os.path.join(tmp_dir, "world_poses.npz")
+        export_world_poses("/home/hsc/25fall/Dyn-HaMR/outputs/logs/video-custom/2025-09-04/demo1-all-shot-0-0-500/init/demo1_000000_init_world_results.npz", tmp_path)

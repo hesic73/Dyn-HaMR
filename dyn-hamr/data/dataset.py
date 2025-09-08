@@ -117,6 +117,10 @@ class MultiPeopleDataset(Dataset):
                 n_tracks = int(tid_spec.split("-")[1])
             # get the longest tracks in the selected shot
             track_ids = sorted(os.listdir(track_root))
+
+            # NOTE (hsc): only keep the track ids that can be parsed to int
+            track_ids = [tid for tid in track_ids if tid.isdigit()]
+            
             track_paths = [
                 [f"{track_root}/{tid}/{name}_keypoints.json" for name in self.img_names]
                 for tid in track_ids
@@ -125,12 +129,14 @@ class MultiPeopleDataset(Dataset):
                 len(list(filter(os.path.isfile, paths))) for paths in track_paths
             ]
             print("raw TRACK IDS and LENGTHS", track_ids, track_lens)
+            for tid,tlen in zip(track_ids, track_lens):
+                print(f"{tid}: {tlen}")
+            
             track_ids = [
                 track_ids[i]
                 for i in range(len(track_lens))  # np.argsort(track_lens)[::-1]
                 if track_lens[i] > MIN_TRACK_LEN
             ]
-            print("TRACK LENGTHS", track_ids, track_lens)
             track_ids = track_ids[:n_tracks]
         else:
             track_ids = [f"{int(tid):03d}" for tid in tid_spec.split("-")]
