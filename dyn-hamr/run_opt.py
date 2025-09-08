@@ -157,8 +157,6 @@ def run_opt(cfg, dataset, out_dir, device):
 
     # HMP
     if cfg.run_prior and not os.path.exists(os.path.join(out_dir, 'prior')):
-        import sys
-        sys.path.append('HMP/')
         from HMP.fitting import run_prior
         run_prior(cfg, dataset, out_dir, device, ['smooth_fit'], \
         obs_data, hand_model, cfg, cfg.data, os.path.join(out_dir, 'prior'))

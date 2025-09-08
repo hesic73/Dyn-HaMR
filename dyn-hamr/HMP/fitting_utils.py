@@ -12,9 +12,9 @@ from smplx import MANO
 from loguru import logger 
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
-from rotations import axis_angle_to_matrix, matrix_to_axis_angle
+from HMP.rotations import axis_angle_to_matrix, matrix_to_axis_angle
 import torch.nn.functional as torch_f
-from nemf.losses import pos_smooth_loss
+from HMP.nemf.losses import pos_smooth_loss
 
 AUGMENTED_MANO_CHAIN = np.array([-1, 0, 1, 2, 0, 4, 5, 0, 7, 8, 0, 10, 11, 0, 13, 14, 15, 3, 6, 12, 9])   
 openpose_skeleton = [-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 0, 13, 14, 15, 0, 17, 18, 19]

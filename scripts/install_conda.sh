@@ -31,3 +31,7 @@ cd ../..
 cd third-party/hamer
 pip install -e .[all]
 pip install -v -e third-party/ViTPose
+
+# install human_body_prior
+cd third-party/human_body_prior
+python setup.py develop

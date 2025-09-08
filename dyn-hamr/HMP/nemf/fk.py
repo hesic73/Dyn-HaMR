@@ -8,7 +8,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
-from rotations import euler_angles_to_matrix, quaternion_to_matrix, rotation_6d_to_matrix
+from HMP.rotations import euler_angles_to_matrix, quaternion_to_matrix, rotation_6d_to_matrix
 
 
 class ForwardKinematicsLayer(nn.Module):

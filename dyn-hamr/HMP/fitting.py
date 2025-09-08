@@ -22,19 +22,19 @@ from torch.autograd import Variable
 # import open3d_viz_overlay
 # from datasets.amass import *
 
-from arguments import Arguments
+from HMP.arguments import Arguments
 from argparse import ArgumentParser
-from nemf.generative import Architecture
-from nemf.fk import ForwardKinematicsLayer
+from HMP.nemf.generative import Architecture
+from HMP.nemf.fk import ForwardKinematicsLayer
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from nemf.losses import GeodesicLoss, pos_smooth_loss, rot_smooth_loss
-from rotations import (axis_angle_to_matrix, matrix_to_axis_angle, matrix_to_quaternion, matrix_to_rotation_6d,
+from HMP.nemf.losses import GeodesicLoss, pos_smooth_loss, rot_smooth_loss
+from HMP.rotations import (axis_angle_to_matrix, matrix_to_axis_angle, matrix_to_quaternion, matrix_to_rotation_6d,
                         quaternion_to_matrix, rotation_6d_to_matrix, axis_angle_to_quaternion, quaternion_to_axis_angle, quat_to_aa)
-from fitting_utils import (process_gt, gmof, perspective_projection, get_joints2d, run_pymafx, run_metro, process_pymafx_mano, compute_seq_intervals,
+from HMP.fitting_utils import (process_gt, gmof, perspective_projection, get_joints2d, run_pymafx, run_metro, process_pymafx_mano, compute_seq_intervals,
                         save_quantitative_evaluation, get_seqname_ho3d_v3, get_seqname_arctic_data, get_seqname_in_the_wild, get_seqname_dexycb,
                         RIGHT_WRIST_BASE_LOC, joints2d_loss, # map_openpose_joints_to_mano, map_mano_joints_to_openpose,
                         export_pymafx_json, blend_keypoints, BMCLoss)
-from utils import estimate_angular_velocity, estimate_linear_velocity, render_openpose
+from HMP.utils import estimate_angular_velocity, estimate_linear_velocity, render_openpose
 bmc = BMCLoss(lambda_bl=1, lambda_rb=1, lambda_a=1)
 
 HAND_JOINT_NUM = 16
@@ -212,7 +212,7 @@ def get_stage2_res(base_dir, device, npz_init_dict, hand_model):
  
     pose = torch.from_numpy(np.asarray(data_poses, np.float32)).to(device)
     pose = pose.view(-1, 15 + 1, 3)  # axis-angle (T, J, 3)
-    assert len(pose) == 128
+    assert len(pose) == 128, len(pose)
 
     trans = torch.from_numpy(np.asarray(cdata['trans'], np.float32)).to(device)  # global translation (T, 3)
 

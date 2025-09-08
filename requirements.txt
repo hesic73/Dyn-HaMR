@@ -27,3 +27,4 @@ xtcocotools
 pandas==1.4.0
 loguru
 mediapipe
+plyfile

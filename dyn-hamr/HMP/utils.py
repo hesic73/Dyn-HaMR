@@ -8,9 +8,9 @@ from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 
-import holden.BVH as BVH
-from holden.Animation import Animation
-from holden.Quaternions import Quaternions
+import HMP.holden.BVH as BVH
+from HMP.holden.Animation import Animation
+from HMP.holden.Quaternions import Quaternions
 from typing import List, Tuple, NewType
 import math
 Tensor = NewType('Tensor', torch.Tensor)
